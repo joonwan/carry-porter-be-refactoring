@@ -1,0 +1,6 @@
+spring:
+  datasource:
+    url: jdbc:mysql://${TEST_DB_HOST:localhost}:${TEST_DB_PORT:3306}/${TEST_DB_NAME:carry_porter_test}
+    username: ${TEST_DB_USERNAME:root}
+    password: ${TEST_DB_PASSWORD:1234}
+
