@@ -7,3 +7,10 @@ spring:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:carry_porter}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:1234}
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:create}
+    properties:
+      hibernate:
+        format_sql: ${JPA_FORMAT_SQL:true}  # Hibernate가 출력하는 SQL을 보기 좋게 줄바꿈과 들여쓰기로 정렬.
+    show-sql: ${JPA_SHOW_SQL:true}          # 실행되는 SQL을 로그에 출력.
