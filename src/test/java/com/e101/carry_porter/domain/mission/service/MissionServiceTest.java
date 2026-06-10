@@ -13,13 +13,13 @@ import com.e101.carry_porter.domain.user.entity.User;
 import com.e101.carry_porter.domain.user.exception.UserErrorCode;
 import com.e101.carry_porter.domain.user.exception.UserException;
 import com.e101.carry_porter.domain.user.repository.UserRepository;
-import com.e101.carry_porter.support.IntegrationTestSupport;
+import com.e101.carry_porter.support.TransactionalIntegrationTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.event.ApplicationEvents;
 
-class MissionServiceTest extends IntegrationTestSupport {
+class MissionServiceTest extends TransactionalIntegrationTestSupport {
 
     @Autowired
     private MissionService missionService;

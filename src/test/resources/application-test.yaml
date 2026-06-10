@@ -1,12 +1,21 @@
 spring:
+  config:
+    import: optional:file:.env[.properties]
   datasource:
     url: jdbc:mysql://${TEST_DB_HOST:localhost}:${TEST_DB_PORT:3306}/${TEST_DB_NAME:carry_porter_test}
     username: ${TEST_DB_USERNAME:root}
     password: ${TEST_DB_PASSWORD:1234}
   jpa:
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: ${TEST_JPA_DDL_AUTO:create-drop}
     properties:
       hibernate:
-        format_sql: true
-    show-sql: true
+        format_sql: ${TEST_JPA_FORMAT_SQL:true}  # Hibernate가 출력하는 SQL을 보기 좋게 줄바꿈과 들여쓰기로 정렬.
+    show-sql: ${TEST_JPA_SHOW_SQL:true}          # 테스트 실행 시 실제 수행되는 SQL을 로그에 출력.
+
+logging:
+  level:
+    org.springframework.transaction.interceptor: ${TEST_LOG_TRANSACTION_INTERCEPTOR:TRACE}     # @Transactional 메서드 진입과 종료 흐름을 추적.
+    org.springframework.orm.jpa.JpaTransactionManager: ${TEST_LOG_JPA_TRANSACTION_MANAGER:DEBUG} # JPA 트랜잭션 생성, 커밋, 롤백 시점을 확인.
+    org.springframework.transaction: ${TEST_LOG_SPRING_TRANSACTION:TRACE}                      # 스프링 전반의 트랜잭션 동작을 상세하게 출력.
+    org.hibernate.engine.transaction.internal.TransactionImpl: ${TEST_LOG_HIBERNATE_TRANSACTION:DEBUG} # Hibernate 내부 트랜잭션 처리 과정을 확인.
