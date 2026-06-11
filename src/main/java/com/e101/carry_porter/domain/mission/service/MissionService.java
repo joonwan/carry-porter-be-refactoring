@@ -1,7 +1,11 @@
 package com.e101.carry_porter.domain.mission.service;
 
 import com.e101.carry_porter.domain.mission.entity.Mission;
+import com.e101.carry_porter.domain.mission.entity.MissionStatus;
 import com.e101.carry_porter.domain.mission.event.MissionCreatedEvent;
+import com.e101.carry_porter.domain.mission.event.MissionStartedEvent;
+import com.e101.carry_porter.domain.mission.exception.MissionErrorCode;
+import com.e101.carry_porter.domain.mission.exception.MissionException;
 import com.e101.carry_porter.domain.mission.repository.MissionRepository;
 import com.e101.carry_porter.domain.mission.service.dto.request.CreateMissionServiceRequest;
 import com.e101.carry_porter.domain.mission.service.dto.response.CreateMissionServiceResponse;
@@ -13,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -39,5 +44,47 @@ public class MissionService {
         eventPublisher.publishEvent(new MissionCreatedEvent(savedMission.getId(), user.getId()));
         log.info("MissionCreatedEvent 발행 완료: missionId = {}", savedMission.getId());
         return CreateMissionServiceResponse.from(savedMission);
+    }
+
+    @Transactional
+    public void dispatch(Long missionId, Long robotId, Long userId) {
+        log.info("mission 시작 처리: missionId = {}, robotId = {}, userId = {}",
+                missionId, robotId, userId);
+
+        Mission mission = missionRepository.findById(missionId)
+                .orElseThrow(() -> new MissionException(MissionErrorCode.MISSION_NOT_FOUND));
+
+        // mission 의 로봇 그리고 사용자가 각각 일치하는지 검증
+        validateDispatchTarget(mission, robotId, userId);
+
+        // mission 상태가 ASSIGNED 인지 검증
+        validateDispatchStatus(mission);
+
+        mission.dispatch();
+
+        eventPublisher.publishEvent(new MissionStartedEvent(
+                missionId,
+                robotId,
+                userId,
+                mission.getRobot().getMacAddress()
+        ));
+        log.info("MissionStartedEvent 발행 완료: missionId = {}, robotId = {}, userId = {}",
+                missionId, robotId, userId);
+    }
+
+    private void validateDispatchTarget(Mission mission, Long robotId, Long userId) {
+        if (!mission.getUser().getId().equals(userId)) {
+            throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
+        }
+
+        if (mission.getRobot() == null || !mission.getRobot().getId().equals(robotId)) {
+            throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
+        }
+    }
+
+    private void validateDispatchStatus(Mission mission) {
+        if (mission.getMissionStatus() != MissionStatus.ASSIGNED) {
+            throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
+        }
     }
 }
