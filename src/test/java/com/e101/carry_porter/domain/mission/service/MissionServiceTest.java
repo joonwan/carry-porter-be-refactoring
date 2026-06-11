@@ -6,9 +6,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e101.carry_porter.domain.mission.entity.Mission;
 import com.e101.carry_porter.domain.mission.entity.MissionStatus;
 import com.e101.carry_porter.domain.mission.event.MissionCreatedEvent;
+import com.e101.carry_porter.domain.mission.event.MissionStartedEvent;
+import com.e101.carry_porter.domain.mission.exception.MissionErrorCode;
+import com.e101.carry_porter.domain.mission.exception.MissionException;
 import com.e101.carry_porter.domain.mission.repository.MissionRepository;
 import com.e101.carry_porter.domain.mission.service.dto.request.CreateMissionServiceRequest;
 import com.e101.carry_porter.domain.mission.service.dto.response.CreateMissionServiceResponse;
+import com.e101.carry_porter.domain.robot.entity.Robot;
+import com.e101.carry_porter.domain.robot.repository.RobotRepository;
 import com.e101.carry_porter.domain.user.entity.User;
 import com.e101.carry_porter.domain.user.exception.UserErrorCode;
 import com.e101.carry_porter.domain.user.exception.UserException;
@@ -29,6 +34,9 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private RobotRepository robotRepository;
 
     @Autowired
     private ApplicationEvents events;
@@ -68,5 +76,66 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
                 .isInstanceOf(UserException.class)
                 .extracting(exception -> ((UserException) exception).getErrorCode())
                 .isEqualTo(UserErrorCode.USER_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("배정된 미션을 시작 처리하면 DISPATCHED 상태로 변경하고 MissionStartedEvent를 발행한다")
+    void dispatch() {
+        // given
+        User user = userRepository.save(User.createUser("dispatch-user"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:21"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+
+        // when
+        missionService.dispatch(mission.getId(), robot.getId(), user.getId());
+
+        // then
+        Mission dispatchedMission = missionRepository.findById(mission.getId()).orElseThrow();
+
+        assertThat(dispatchedMission.getMissionStatus()).isEqualTo(MissionStatus.DISPATCHED);
+        assertThat(events.stream(MissionStartedEvent.class)).hasSize(1);
+        assertThat(events.stream(MissionStartedEvent.class).findFirst()).isPresent()
+                .get()
+                .extracting(
+                        MissionStartedEvent::missionId,
+                        MissionStartedEvent::robotId,
+                        MissionStartedEvent::userId,
+                        MissionStartedEvent::robotMacAddress
+                )
+                .containsExactly(mission.getId(), robot.getId(), user.getId(), robot.getMacAddress());
+    }
+
+    @Test
+    @DisplayName("미션의 사용자나 로봇이 일치하지 않으면 MissionException을 던진다")
+    void dispatchWithInvalidDispatchTarget() {
+        // given
+        User user = userRepository.save(User.createUser("dispatch-user-2"));
+        User anotherUser = userRepository.save(User.createUser("dispatch-user-3"));
+        Robot assignedRobot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:22"));
+        Robot anotherRobot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:23"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(assignedRobot);
+
+        // when & then
+        assertThatThrownBy(() -> missionService.dispatch(mission.getId(), anotherRobot.getId(), anotherUser.getId()))
+                .isInstanceOf(MissionException.class)
+                .extracting(exception -> ((MissionException) exception).getErrorCode())
+                .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
+    }
+
+    @Test
+    @DisplayName("미션 상태가 ASSIGNED가 아니면 MissionException을 던진다")
+    void dispatchWithInvalidMissionStatus() {
+        // given
+        User user = userRepository.save(User.createUser("dispatch-user-4"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:24"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+
+        // when & then
+        assertThatThrownBy(() -> missionService.dispatch(mission.getId(), robot.getId(), user.getId()))
+                .isInstanceOf(MissionException.class)
+                .extracting(exception -> ((MissionException) exception).getErrorCode())
+                .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
     }
 }
