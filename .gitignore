@@ -6,3 +6,7 @@ out/
 *.iml
 .env
 docs/
+infra/mosquitto/data/*
+!infra/mosquitto/data/.gitkeep
+infra/mosquitto/log/*
+!infra/mosquitto/log/.gitkeep
