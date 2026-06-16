@@ -1,6 +1,7 @@
 package com.e101.carry_porter.domain.mission.listener;
 
 import com.e101.carry_porter.domain.mission.event.MissionArrivedEvent;
+import com.e101.carry_porter.domain.mission.event.MissionFailedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionFinishedEvent;
 import com.e101.carry_porter.domain.mission.service.MissionService;
 import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
@@ -37,5 +38,18 @@ public class MissionStatusEventListener {
         log.info("MissionFinishedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}",
                 event.missionId(), event.robotMacAddress(), event.userId());
         missionService.finish(event.missionId(), event.robotMacAddress(), event.userId());
+    }
+
+    @EventListener
+    public void handleMissionFailedEvent(MissionFailedEvent event) {
+        log.info("MissionFailedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}, failureCode = {}",
+                event.missionId(), event.robotMacAddress(), event.userId(), event.failureCode());
+        missionService.fail(
+                event.missionId(),
+                event.robotMacAddress(),
+                event.userId(),
+                event.failureCode(),
+                event.message()
+        );
     }
 }

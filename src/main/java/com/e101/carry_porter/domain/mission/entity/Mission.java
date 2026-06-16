@@ -78,9 +78,6 @@ public class Mission extends BaseEntity {
 
     public void fail() {
         this.missionStatus = MissionStatus.FAILED;
-        if (this.robot != null) {
-            this.robot.toIdle();
-        }
     }
 
     @Builder

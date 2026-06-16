@@ -131,6 +131,32 @@ public class MissionService {
                 missionId, robotMacAddress, userId);
     }
 
+    @Transactional
+    public void fail(Long missionId, String robotMacAddress, Long userId, String failureCode, String message) {
+        log.info("mission 실패 처리: missionId = {}, robotMacAddress = {}, userId = {}, failureCode = {}, message = {}",
+                missionId, robotMacAddress, userId, failureCode, message);
+
+        Mission mission = missionRepository.findById(missionId)
+                .orElseThrow(() -> new MissionException(MissionErrorCode.MISSION_NOT_FOUND));
+
+        validateArrivalTarget(mission, robotMacAddress, userId);
+
+        if (mission.getMissionStatus() == MissionStatus.FINISHED) {
+            log.warn("이미 종료된 mission 이므로 실패 처리를 건너뜁니다: missionId = {}", missionId);
+            return;
+        }
+
+        if (mission.getMissionStatus() == MissionStatus.FAILED) {
+            log.info("이미 실패 처리된 mission 이므로 중복 실패 처리를 건너뜁니다: missionId = {}", missionId);
+            return;
+        }
+
+        mission.fail();
+
+        log.info("mission 실패 처리 완료: missionId = {}, robotMacAddress = {}, userId = {}, failureCode = {}",
+                missionId, robotMacAddress, userId, failureCode);
+    }
+
     private void validateDispatchTarget(Mission mission, Long robotId, Long userId) {
         if (!mission.getUser().getId().equals(userId)) {
             throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
@@ -174,4 +200,5 @@ public class MissionService {
             throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
         }
     }
+
 }

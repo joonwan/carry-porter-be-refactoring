@@ -319,4 +319,104 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
                 .extracting(exception -> ((MissionException) exception).getErrorCode())
                 .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
     }
+
+    @Test
+    @DisplayName("진행 중인 미션을 실패 처리하면 FAILED 상태로 변경되고 로봇은 기존 BUSY 상태를 유지한다")
+    void fail() {
+        // given
+        User user = userRepository.save(User.createUser("fail-user"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:61"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+
+        // when
+        missionService.fail(mission.getId(), robot.getMacAddress(), user.getId(), "ROBOT_EMERGENCY", "obstacle detected");
+
+        // then
+        Mission failedMission = missionRepository.findById(mission.getId()).orElseThrow();
+
+        assertThat(failedMission.getMissionStatus()).isEqualTo(MissionStatus.FAILED);
+        assertThat(failedMission.getRobot().getRobotStatus()).isEqualTo(com.e101.carry_porter.domain.robot.entity.RobotStatus.BUSY);
+    }
+
+    @Test
+    @DisplayName("실패 처리 시 미션의 사용자나 로봇 mac address가 일치하지 않으면 MissionException을 던진다")
+    void failWithInvalidTarget() {
+        // given
+        User user = userRepository.save(User.createUser("fail-user-2"));
+        User anotherUser = userRepository.save(User.createUser("fail-user-3"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:62"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+
+        // when & then
+        assertThatThrownBy(() -> missionService.fail(
+                mission.getId(),
+                "AA:BB:CC:DD:EE:99",
+                anotherUser.getId(),
+                "ROBOT_EMERGENCY",
+                "obstacle detected"
+        ))
+                .isInstanceOf(MissionException.class)
+                .extracting(exception -> ((MissionException) exception).getErrorCode())
+                .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
+    }
+
+    @Test
+    @DisplayName("이미 FINISHED 상태인 미션에 실패 메시지가 와도 상태를 덮어쓰지 않는다")
+    void failWithFinishedMissionStatus() {
+        // given
+        User user = userRepository.save(User.createUser("fail-user-4"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:63"));
+        Mission finishedMission = missionRepository.save(Mission.createMission(user));
+        finishedMission.assignRobot(robot);
+        finishedMission.dispatch();
+        finishedMission.arrive();
+        finishedMission.startReturning();
+        finishedMission.finish();
+
+        // when
+        missionService.fail(
+                finishedMission.getId(),
+                robot.getMacAddress(),
+                user.getId(),
+                "ROBOT_EMERGENCY",
+                "obstacle detected"
+        );
+
+        // then
+        Mission unchangedMission = missionRepository.findById(finishedMission.getId()).orElseThrow();
+
+        assertThat(unchangedMission.getMissionStatus()).isEqualTo(MissionStatus.FINISHED);
+        assertThat(unchangedMission.getRobot().getRobotStatus()).isEqualTo(com.e101.carry_porter.domain.robot.entity.RobotStatus.IDLE);
+    }
+
+    @Test
+    @DisplayName("이미 FAILED 상태인 미션에 실패 메시지가 다시 와도 예외 없이 그대로 유지한다")
+    void failWithAlreadyFailedMissionStatus() {
+        // given
+        User user = userRepository.save(User.createUser("fail-user-5"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:64"));
+        Mission failedMission = missionRepository.save(Mission.createMission(user));
+        failedMission.assignRobot(robot);
+        failedMission.dispatch();
+        failedMission.fail();
+
+        // when
+        missionService.fail(
+                failedMission.getId(),
+                robot.getMacAddress(),
+                user.getId(),
+                "ROBOT_EMERGENCY",
+                "obstacle detected"
+        );
+
+        // then
+        Mission unchangedMission = missionRepository.findById(failedMission.getId()).orElseThrow();
+
+        assertThat(unchangedMission.getMissionStatus()).isEqualTo(MissionStatus.FAILED);
+        assertThat(unchangedMission.getRobot().getRobotStatus()).isEqualTo(com.e101.carry_porter.domain.robot.entity.RobotStatus.BUSY);
+    }
 }

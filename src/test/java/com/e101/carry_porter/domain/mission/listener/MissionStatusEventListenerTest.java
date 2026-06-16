@@ -4,6 +4,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.e101.carry_porter.domain.mission.event.MissionArrivedEvent;
+import com.e101.carry_porter.domain.mission.event.MissionFailedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionFinishedEvent;
 import com.e101.carry_porter.domain.mission.service.MissionService;
 import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
@@ -60,5 +61,30 @@ class MissionStatusEventListenerTest {
 
         // then
         verify(missionService, times(1)).finish(1L, "AA:BB:CC:DD:EE:01", 3L);
+    }
+
+    @Test
+    @DisplayName("MissionFailedEvent를 수신하면 missionService.fail()을 한 번 호출한다")
+    void handleMissionFailedEvent() {
+        // given
+        MissionFailedEvent event = new MissionFailedEvent(
+                1L,
+                "AA:BB:CC:DD:EE:01",
+                3L,
+                "ROBOT_EMERGENCY",
+                "obstacle detected"
+        );
+
+        // when
+        missionStatusEventListener.handleMissionFailedEvent(event);
+
+        // then
+        verify(missionService, times(1)).fail(
+                1L,
+                "AA:BB:CC:DD:EE:01",
+                3L,
+                "ROBOT_EMERGENCY",
+                "obstacle detected"
+        );
     }
 }
