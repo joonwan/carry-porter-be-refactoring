@@ -19,3 +19,7 @@ logging:
     org.springframework.orm.jpa.JpaTransactionManager: ${TEST_LOG_JPA_TRANSACTION_MANAGER:DEBUG} # JPA 트랜잭션 생성, 커밋, 롤백 시점을 확인.
     org.springframework.transaction: ${TEST_LOG_SPRING_TRANSACTION:TRACE}                      # 스프링 전반의 트랜잭션 동작을 상세하게 출력.
     org.hibernate.engine.transaction.internal.TransactionImpl: ${TEST_LOG_HIBERNATE_TRANSACTION:DEBUG} # Hibernate 내부 트랜잭션 처리 과정을 확인.
+
+carry-porter:
+  mqtt:
+    enabled: false  # 테스트에서는 실제 MQTT Broker 연결 없이 도메인 로직만 검증하도록 비활성화.

@@ -14,3 +14,18 @@ spring:
       hibernate:
         format_sql: ${JPA_FORMAT_SQL:true}  # Hibernate가 출력하는 SQL을 보기 좋게 줄바꿈과 들여쓰기로 정렬.
     show-sql: ${JPA_SHOW_SQL:true}          # 실행되는 SQL을 로그에 출력.
+
+carry-porter:
+  mqtt:
+    enabled: ${MQTT_ENABLED:false}                                # MQTT 연동 활성화 여부.
+    broker-url: ${MQTT_BROKER_URL:tcp://localhost:1883}          # MQTT Broker 접속 주소.
+    client-id: ${MQTT_CLIENT_ID:carry-porter-server}             # 서버가 MQTT Broker에 접속할 때 사용할 클라이언트 아이디.
+    username: ${MQTT_USERNAME:}                                  # MQTT Broker 인증용 사용자명. 로컬 개발에서는 비워둘 수 있음.
+    password: ${MQTT_PASSWORD:}                                  # MQTT Broker 인증용 비밀번호. 로컬 개발에서는 비워둘 수 있음.
+    completion-timeout: ${MQTT_COMPLETION_TIMEOUT:5000}          # MQTT 송수신 완료를 기다리는 최대 시간(ms).
+    inbound:
+      topic: ${MQTT_INBOUND_TOPIC:v1/robots/+/event/#}           # 서버가 구독할 로봇 이벤트 topic 패턴.
+      qos: ${MQTT_INBOUND_QOS:1}                                 # inbound 메시지 수신 시 사용할 QoS.
+    outbound:
+      default-topic: ${MQTT_OUTBOUND_DEFAULT_TOPIC:v1/robots/unknown/command/departure} # 기본 publish topic. 실제 전송 시 header로 덮어쓴다.
+      qos: ${MQTT_OUTBOUND_QOS:1}                                # outbound 메시지 발행 시 사용할 QoS.
