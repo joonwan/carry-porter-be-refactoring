@@ -3,6 +3,7 @@ package com.e101.carry_porter.domain.mission.listener;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
+import com.e101.carry_porter.domain.mission.event.MissionArrivedEvent;
 import com.e101.carry_porter.domain.mission.service.MissionService;
 import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
 import org.junit.jupiter.api.DisplayName;
@@ -32,5 +33,18 @@ class MissionStatusEventListenerTest {
 
         // then
         verify(missionService, times(1)).dispatch(1L, 2L, 3L);
+    }
+
+    @Test
+    @DisplayName("MissionArrivedEvent를 수신하면 missionService.arrive()를 한 번 호출한다")
+    void handleMissionArrivedEvent() {
+        // given
+        MissionArrivedEvent event = new MissionArrivedEvent(1L, "AA:BB:CC:DD:EE:01", 3L);
+
+        // when
+        missionStatusEventListener.handleMissionArrivedEvent(event);
+
+        // then
+        verify(missionService, times(1)).arrive(1L, "AA:BB:CC:DD:EE:01", 3L);
     }
 }

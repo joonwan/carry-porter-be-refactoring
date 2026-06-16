@@ -2,6 +2,7 @@ package com.e101.carry_porter.domain.mission.service;
 
 import com.e101.carry_porter.domain.mission.entity.Mission;
 import com.e101.carry_porter.domain.mission.entity.MissionStatus;
+import com.e101.carry_porter.domain.mission.event.MissionArrivedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionCreatedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionStartedEvent;
 import com.e101.carry_porter.domain.mission.exception.MissionErrorCode;
@@ -17,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Slf4j
@@ -72,6 +72,23 @@ public class MissionService {
                 missionId, robotId, userId);
     }
 
+    @Transactional
+    public void arrive(Long missionId, String robotMacAddress, Long userId) {
+        log.info("mission 도착 처리: missionId = {}, robotMacAddress = {}, userId = {}",
+                missionId, robotMacAddress, userId);
+
+        Mission mission = missionRepository.findById(missionId)
+                .orElseThrow(() -> new MissionException(MissionErrorCode.MISSION_NOT_FOUND));
+
+        validateArrivalTarget(mission, robotMacAddress, userId);
+        validateArrivalStatus(mission);
+
+        mission.arrive();
+
+        log.info("mission 도착 처리 완료: missionId = {}, robotMacAddress = {}, userId = {}",
+                missionId, robotMacAddress, userId);
+    }
+
     private void validateDispatchTarget(Mission mission, Long robotId, Long userId) {
         if (!mission.getUser().getId().equals(userId)) {
             throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
@@ -84,6 +101,22 @@ public class MissionService {
 
     private void validateDispatchStatus(Mission mission) {
         if (mission.getMissionStatus() != MissionStatus.ASSIGNED) {
+            throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
+        }
+    }
+
+    private void validateArrivalTarget(Mission mission, String robotMacAddress, Long userId) {
+        if (!mission.getUser().getId().equals(userId)) {
+            throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
+        }
+
+        if (mission.getRobot() == null || !mission.getRobot().getMacAddress().equals(robotMacAddress)) {
+            throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
+        }
+    }
+
+    private void validateArrivalStatus(Mission mission) {
+        if (mission.getMissionStatus() != MissionStatus.DISPATCHED) {
             throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
         }
     }

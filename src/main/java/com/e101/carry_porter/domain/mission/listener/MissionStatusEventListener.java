@@ -1,5 +1,6 @@
 package com.e101.carry_porter.domain.mission.listener;
 
+import com.e101.carry_porter.domain.mission.event.MissionArrivedEvent;
 import com.e101.carry_porter.domain.mission.service.MissionService;
 import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
 import lombok.RequiredArgsConstructor;
@@ -20,5 +21,12 @@ public class MissionStatusEventListener {
         log.info("RobotAssignedEvent 수신: missionId = {}, robotId = {}, userId = {}",
                 event.missionId(), event.robotId(), event.userId());
         missionService.dispatch(event.missionId(), event.robotId(), event.userId());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleMissionArrivedEvent(MissionArrivedEvent event) {
+        log.info("MissionArrivedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}",
+                event.missionId(), event.robotMacAddress(), event.userId());
+        missionService.arrive(event.missionId(), event.robotMacAddress(), event.userId());
     }
 }

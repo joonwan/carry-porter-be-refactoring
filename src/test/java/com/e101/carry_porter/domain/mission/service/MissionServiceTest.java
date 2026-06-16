@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e101.carry_porter.domain.mission.entity.Mission;
 import com.e101.carry_porter.domain.mission.entity.MissionStatus;
+import com.e101.carry_porter.domain.mission.event.MissionArrivedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionCreatedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionStartedEvent;
 import com.e101.carry_porter.domain.mission.exception.MissionErrorCode;
@@ -134,6 +135,59 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
 
         // when & then
         assertThatThrownBy(() -> missionService.dispatch(mission.getId(), robot.getId(), user.getId()))
+                .isInstanceOf(MissionException.class)
+                .extracting(exception -> ((MissionException) exception).getErrorCode())
+                .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
+    }
+
+    @Test
+    @DisplayName("이동 중인 미션을 도착 처리하면 ARRIVED 상태로 변경한다")
+    void arrive() {
+        // given
+        User user = userRepository.save(User.createUser("arrive-user"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:31"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+
+        // when
+        missionService.arrive(mission.getId(), robot.getMacAddress(), user.getId());
+
+        // then
+        Mission arrivedMission = missionRepository.findById(mission.getId()).orElseThrow();
+
+        assertThat(arrivedMission.getMissionStatus()).isEqualTo(MissionStatus.ARRIVED);
+    }
+
+    @Test
+    @DisplayName("도착 처리 시 미션의 사용자나 로봇 mac address가 일치하지 않으면 MissionException을 던진다")
+    void arriveWithInvalidArrivalTarget() {
+        // given
+        User user = userRepository.save(User.createUser("arrive-user-2"));
+        User anotherUser = userRepository.save(User.createUser("arrive-user-3"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:32"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+
+        // when & then
+        assertThatThrownBy(() -> missionService.arrive(mission.getId(), "AA:BB:CC:DD:EE:99", anotherUser.getId()))
+                .isInstanceOf(MissionException.class)
+                .extracting(exception -> ((MissionException) exception).getErrorCode())
+                .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
+    }
+
+    @Test
+    @DisplayName("미션 상태가 DISPATCHED가 아니면 도착 처리 시 MissionException을 던진다")
+    void arriveWithInvalidMissionStatus() {
+        // given
+        User user = userRepository.save(User.createUser("arrive-user-4"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:33"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+
+        // when & then
+        assertThatThrownBy(() -> missionService.arrive(mission.getId(), robot.getMacAddress(), user.getId()))
                 .isInstanceOf(MissionException.class)
                 .extracting(exception -> ((MissionException) exception).getErrorCode())
                 .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
