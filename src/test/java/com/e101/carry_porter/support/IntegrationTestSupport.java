@@ -1,9 +1,12 @@
 package com.e101.carry_porter.support;
 
+import com.e101.carry_porter.global.mqtt.MqttGateway;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.messaging.MessageChannel;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.context.event.RecordApplicationEvents;
 import org.testcontainers.containers.MySQLContainer;
 
@@ -12,16 +15,19 @@ import org.testcontainers.containers.MySQLContainer;
 @RecordApplicationEvents
 public abstract class IntegrationTestSupport {
 
-   protected static final MySQLContainer<?> MYSQL_CONTAINER;
+    protected static final MySQLContainer<?> MYSQL_CONTAINER;
 
-   static {
-       MYSQL_CONTAINER = new MySQLContainer<>("mysql:8.0")
-               .withDatabaseName("carry_porter_test")
-               .withUsername("root")
-               .withPassword("1234");
+    @MockitoBean
+    private MqttGateway mqttGateway;
 
-       MYSQL_CONTAINER.start();
-   }
+    static {
+        MYSQL_CONTAINER = new MySQLContainer<>("mysql:8.0")
+                .withDatabaseName("carry_porter_test")
+                .withUsername("root")
+                .withPassword("1234");
+
+        MYSQL_CONTAINER.start();
+    }
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
