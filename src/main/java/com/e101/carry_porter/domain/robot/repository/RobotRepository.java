@@ -11,4 +11,6 @@ public interface RobotRepository extends JpaRepository<Robot, Long> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Robot> findFirstByRobotStatusOrderByIdAsc(RobotStatus robotStatus);
+
+    Optional<Robot> findByMacAddress(String macAddress);
 }

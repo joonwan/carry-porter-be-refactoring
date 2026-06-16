@@ -2,7 +2,7 @@ package com.e101.carry_porter.domain.mission.event;
 
 public record MissionFinishedEvent(
         Long missionId,
-        Long robotId,
+        String robotMacAddress,
         Long userId
 ) {
 }
