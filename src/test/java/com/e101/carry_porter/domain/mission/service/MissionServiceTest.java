@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.e101.carry_porter.domain.mission.entity.Mission;
 import com.e101.carry_porter.domain.mission.entity.MissionStatus;
 import com.e101.carry_porter.domain.mission.event.MissionCreatedEvent;
+import com.e101.carry_porter.domain.mission.event.MissionFinishedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionReturnStartedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionStartedEvent;
 import com.e101.carry_porter.domain.mission.exception.MissionErrorCode;
@@ -254,6 +255,66 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
 
         // when & then
         assertThatThrownBy(() -> missionService.returnStart(mission.getId(), robot.getMacAddress(), user.getId()))
+                .isInstanceOf(MissionException.class)
+                .extracting(exception -> ((MissionException) exception).getErrorCode())
+                .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
+    }
+
+    @Test
+    @DisplayName("복귀 중인 미션을 종료 처리하면 FINISHED 상태로 변경되고 로봇은 IDLE 상태가 된다")
+    void finish() {
+        // given
+        User user = userRepository.save(User.createUser("finish-user"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:51"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+        mission.arrive();
+        mission.startReturning();
+
+        // when
+        missionService.finish(mission.getId(), robot.getMacAddress(), user.getId());
+
+        // then
+        Mission finishedMission = missionRepository.findById(mission.getId()).orElseThrow();
+
+        assertThat(finishedMission.getMissionStatus()).isEqualTo(MissionStatus.FINISHED);
+        assertThat(finishedMission.getRobot().getRobotStatus()).isEqualTo(com.e101.carry_porter.domain.robot.entity.RobotStatus.IDLE);
+    }
+
+    @Test
+    @DisplayName("종료 처리 시 미션의 사용자나 로봇 mac address가 일치하지 않으면 MissionException을 던진다")
+    void finishWithInvalidTarget() {
+        // given
+        User user = userRepository.save(User.createUser("finish-user-2"));
+        User anotherUser = userRepository.save(User.createUser("finish-user-3"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:52"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+        mission.arrive();
+        mission.startReturning();
+
+        // when & then
+        assertThatThrownBy(() -> missionService.finish(mission.getId(), "AA:BB:CC:DD:EE:99", anotherUser.getId()))
+                .isInstanceOf(MissionException.class)
+                .extracting(exception -> ((MissionException) exception).getErrorCode())
+                .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
+    }
+
+    @Test
+    @DisplayName("미션 상태가 RETURNING이 아니면 종료 처리 시 MissionException을 던진다")
+    void finishWithInvalidMissionStatus() {
+        // given
+        User user = userRepository.save(User.createUser("finish-user-4"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:53"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+        mission.arrive();
+
+        // when & then
+        assertThatThrownBy(() -> missionService.finish(mission.getId(), robot.getMacAddress(), user.getId()))
                 .isInstanceOf(MissionException.class)
                 .extracting(exception -> ((MissionException) exception).getErrorCode())
                 .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);

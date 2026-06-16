@@ -1,10 +1,12 @@
 package com.e101.carry_porter.domain.mission.listener;
 
 import com.e101.carry_porter.domain.mission.event.MissionArrivedEvent;
+import com.e101.carry_porter.domain.mission.event.MissionFinishedEvent;
 import com.e101.carry_porter.domain.mission.service.MissionService;
 import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -23,10 +25,17 @@ public class MissionStatusEventListener {
         missionService.dispatch(event.missionId(), event.robotId(), event.userId());
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void handleMissionArrivedEvent(MissionArrivedEvent event) {
         log.info("MissionArrivedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}",
                 event.missionId(), event.robotMacAddress(), event.userId());
         missionService.arrive(event.missionId(), event.robotMacAddress(), event.userId());
+    }
+
+    @EventListener
+    public void handleMissionFinishedEvent(MissionFinishedEvent event) {
+        log.info("MissionFinishedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}",
+                event.missionId(), event.robotMacAddress(), event.userId());
+        missionService.finish(event.missionId(), event.robotMacAddress(), event.userId());
     }
 }

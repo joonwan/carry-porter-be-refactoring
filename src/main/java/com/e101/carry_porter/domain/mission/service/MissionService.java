@@ -3,6 +3,7 @@ package com.e101.carry_porter.domain.mission.service;
 import com.e101.carry_porter.domain.mission.entity.Mission;
 import com.e101.carry_porter.domain.mission.entity.MissionStatus;
 import com.e101.carry_porter.domain.mission.event.MissionCreatedEvent;
+import com.e101.carry_porter.domain.mission.event.MissionFinishedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionReturnStartedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionStartedEvent;
 import com.e101.carry_porter.domain.mission.exception.MissionErrorCode;
@@ -113,6 +114,23 @@ public class MissionService {
                 missionId, mission.getRobot().getId(), userId);
     }
 
+    @Transactional
+    public void finish(Long missionId, String robotMacAddress, Long userId) {
+        log.info("mission 종료 처리: missionId = {}, robotMacAddress = {}, userId = {}",
+                missionId, robotMacAddress, userId);
+
+        Mission mission = missionRepository.findById(missionId)
+                .orElseThrow(() -> new MissionException(MissionErrorCode.MISSION_NOT_FOUND));
+
+        validateArrivalTarget(mission, robotMacAddress, userId);
+        validateFinishStatus(mission);
+
+        mission.finish();
+
+        log.info("mission 종료 처리 완료: missionId = {}, robotMacAddress = {}, userId = {}",
+                missionId, robotMacAddress, userId);
+    }
+
     private void validateDispatchTarget(Mission mission, Long robotId, Long userId) {
         if (!mission.getUser().getId().equals(userId)) {
             throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
@@ -147,6 +165,12 @@ public class MissionService {
 
     private void validateReturnStartStatus(Mission mission) {
         if (mission.getMissionStatus() != MissionStatus.ARRIVED) {
+            throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
+        }
+    }
+
+    private void validateFinishStatus(Mission mission) {
+        if (mission.getMissionStatus() != MissionStatus.RETURNING) {
             throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
         }
     }
