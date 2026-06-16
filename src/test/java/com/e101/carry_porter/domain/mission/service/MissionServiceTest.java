@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e101.carry_porter.domain.mission.entity.Mission;
 import com.e101.carry_porter.domain.mission.entity.MissionStatus;
-import com.e101.carry_porter.domain.mission.event.MissionArrivedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionCreatedEvent;
+import com.e101.carry_porter.domain.mission.event.MissionReturnStartedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionStartedEvent;
 import com.e101.carry_porter.domain.mission.exception.MissionErrorCode;
 import com.e101.carry_porter.domain.mission.exception.MissionException;
@@ -188,6 +188,72 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
 
         // when & then
         assertThatThrownBy(() -> missionService.arrive(mission.getId(), robot.getMacAddress(), user.getId()))
+                .isInstanceOf(MissionException.class)
+                .extracting(exception -> ((MissionException) exception).getErrorCode())
+                .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
+    }
+
+    @Test
+    @DisplayName("도착한 미션을 복귀 시작 처리하면 RETURNING 상태로 변경하고 MissionReturnStartedEvent를 발행한다")
+    void returnStart() {
+        // given
+        User user = userRepository.save(User.createUser("return-user"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:41"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+        mission.arrive();
+
+        // when
+        missionService.returnStart(mission.getId(), robot.getMacAddress(), user.getId());
+
+        // then
+        Mission returningMission = missionRepository.findById(mission.getId()).orElseThrow();
+
+        assertThat(returningMission.getMissionStatus()).isEqualTo(MissionStatus.RETURNING);
+        assertThat(events.stream(MissionReturnStartedEvent.class)).hasSize(1);
+        assertThat(events.stream(MissionReturnStartedEvent.class).findFirst()).isPresent()
+                .get()
+                .extracting(
+                        MissionReturnStartedEvent::missionId,
+                        MissionReturnStartedEvent::robotId,
+                        MissionReturnStartedEvent::userId,
+                        MissionReturnStartedEvent::robotMacAddress
+                )
+                .containsExactly(mission.getId(), robot.getId(), user.getId(), robot.getMacAddress());
+    }
+
+    @Test
+    @DisplayName("복귀 시작 처리 시 미션의 사용자나 로봇 mac address가 일치하지 않으면 MissionException을 던진다")
+    void returnStartWithInvalidTarget() {
+        // given
+        User user = userRepository.save(User.createUser("return-user-2"));
+        User anotherUser = userRepository.save(User.createUser("return-user-3"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:42"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+        mission.arrive();
+
+        // when & then
+        assertThatThrownBy(() -> missionService.returnStart(mission.getId(), "AA:BB:CC:DD:EE:99", anotherUser.getId()))
+                .isInstanceOf(MissionException.class)
+                .extracting(exception -> ((MissionException) exception).getErrorCode())
+                .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
+    }
+
+    @Test
+    @DisplayName("미션 상태가 ARRIVED가 아니면 복귀 시작 처리 시 MissionException을 던진다")
+    void returnStartWithInvalidMissionStatus() {
+        // given
+        User user = userRepository.save(User.createUser("return-user-4"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:43"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+
+        // when & then
+        assertThatThrownBy(() -> missionService.returnStart(mission.getId(), robot.getMacAddress(), user.getId()))
                 .isInstanceOf(MissionException.class)
                 .extracting(exception -> ((MissionException) exception).getErrorCode())
                 .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
