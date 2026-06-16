@@ -1,5 +1,6 @@
 package com.e101.carry_porter.domain.robot.listener;
 
+import com.e101.carry_porter.domain.mission.event.MissionReturnStartedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionStartedEvent;
 import com.e101.carry_porter.domain.robot.service.MqttCommandPublisher;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +23,18 @@ public class RobotCommandEventListener {
                 event.robotId());
 
         mqttCommandPublisher.publishDeparture(
+                event.missionId(),
+                event.userId(),
+                event.robotMacAddress());
+    }
+
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    public void handleMissionReturnStartedEvent(MissionReturnStartedEvent event) {
+        log.info("MissionReturnStartedEvent 수신: mission id = {}. robot id = {}",
+                event.missionId(),
+                event.robotId());
+
+        mqttCommandPublisher.publishReturn(
                 event.missionId(),
                 event.userId(),
                 event.robotMacAddress());

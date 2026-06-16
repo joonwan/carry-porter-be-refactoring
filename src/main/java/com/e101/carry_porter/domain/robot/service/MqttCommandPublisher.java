@@ -21,11 +21,29 @@ public class MqttCommandPublisher {
         log.info("departure command 발행: mission id = {} robot mac addr = {}", missionId, macAddress);
     }
 
+    public void publishReturn(Long missionId, Long userId, String macAddress) {
+        String topic = buildReturnTopic(macAddress);
+        String payload = buildReturnPayload(missionId, userId);
+
+        mqttGateway.publish(topic, payload);
+        log.info("return command 발행: mission id = {} robot mac addr = {}", missionId, macAddress);
+    }
+
     private String buildDepartureTopic(String macAddress) {
         return "v1/robots/" + macAddress + "/command/departure";
     }
 
+    private String buildReturnTopic(String macAddress) {
+        return "v1/robots/" + macAddress + "/command/return";
+    }
+
     private String buildDeparturePayload(Long missionId, Long userId) {
+        return """
+                {"missionId":%d,"userId":%d}
+                """.formatted(missionId, userId);
+    }
+
+    private String buildReturnPayload(Long missionId, Long userId) {
         return """
                 {"missionId":%d,"userId":%d}
                 """.formatted(missionId, userId);
