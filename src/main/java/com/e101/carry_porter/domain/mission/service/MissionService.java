@@ -82,6 +82,16 @@ public class MissionService {
                 .orElseThrow(() -> new MissionException(MissionErrorCode.MISSION_NOT_FOUND));
 
         validateArrivalTarget(mission, robotMacAddress, userId);
+
+        if (mission.getMissionStatus() == MissionStatus.ARRIVED
+                || mission.getMissionStatus() == MissionStatus.RETURNING
+                || mission.getMissionStatus() == MissionStatus.FINISHED
+                || mission.getMissionStatus() == MissionStatus.FAILED) {
+            log.info("이미 도착 처리되었거나 이후 단계로 진행된 mission 이므로 도착 처리를 건너뜁니다: missionId = {}, currentStatus = {}",
+                    missionId, mission.getMissionStatus());
+            return;
+        }
+
         validateArrivalStatus(mission);
 
         mission.arrive();
@@ -123,6 +133,17 @@ public class MissionService {
                 .orElseThrow(() -> new MissionException(MissionErrorCode.MISSION_NOT_FOUND));
 
         validateArrivalTarget(mission, robotMacAddress, userId);
+
+        if (mission.getMissionStatus() == MissionStatus.FINISHED) {
+            log.info("이미 종료 처리된 mission 이므로 중복 종료 처리를 건너뜁니다: missionId = {}", missionId);
+            return;
+        }
+
+        if (mission.getMissionStatus() == MissionStatus.FAILED) {
+            log.warn("이미 실패 처리된 mission 이므로 종료 처리를 건너뜁니다: missionId = {}", missionId);
+            return;
+        }
+
         validateFinishStatus(mission);
 
         mission.finish();

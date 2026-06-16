@@ -161,6 +161,48 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("이미 ARRIVED 상태인 미션에 도착 메시지가 다시 와도 예외 없이 그대로 유지한다")
+    void arriveWithAlreadyArrivedMissionStatus() {
+        // given
+        User user = userRepository.save(User.createUser("arrive-user-duplicate"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:34"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+        mission.arrive();
+
+        // when
+        missionService.arrive(mission.getId(), robot.getMacAddress(), user.getId());
+
+        // then
+        Mission unchangedMission = missionRepository.findById(mission.getId()).orElseThrow();
+
+        assertThat(unchangedMission.getMissionStatus()).isEqualTo(MissionStatus.ARRIVED);
+        assertThat(unchangedMission.getRobot().getRobotStatus()).isEqualTo(com.e101.carry_porter.domain.robot.entity.RobotStatus.BUSY);
+    }
+
+    @Test
+    @DisplayName("이미 RETURNING 상태인 미션에 늦게 도착 메시지가 와도 상태를 덮어쓰지 않는다")
+    void arriveWithReturningMissionStatus() {
+        // given
+        User user = userRepository.save(User.createUser("arrive-user-returning"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:35"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+        mission.arrive();
+        mission.startReturning();
+
+        // when
+        missionService.arrive(mission.getId(), robot.getMacAddress(), user.getId());
+
+        // then
+        Mission unchangedMission = missionRepository.findById(mission.getId()).orElseThrow();
+
+        assertThat(unchangedMission.getMissionStatus()).isEqualTo(MissionStatus.RETURNING);
+    }
+
+    @Test
     @DisplayName("도착 처리 시 미션의 사용자나 로봇 mac address가 일치하지 않으면 MissionException을 던진다")
     void arriveWithInvalidArrivalTarget() {
         // given
@@ -280,6 +322,50 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
 
         assertThat(finishedMission.getMissionStatus()).isEqualTo(MissionStatus.FINISHED);
         assertThat(finishedMission.getRobot().getRobotStatus()).isEqualTo(com.e101.carry_porter.domain.robot.entity.RobotStatus.IDLE);
+    }
+
+    @Test
+    @DisplayName("이미 FINISHED 상태인 미션에 종료 메시지가 다시 와도 예외 없이 그대로 유지한다")
+    void finishWithAlreadyFinishedMissionStatus() {
+        // given
+        User user = userRepository.save(User.createUser("finish-user-duplicate"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:54"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+        mission.arrive();
+        mission.startReturning();
+        mission.finish();
+
+        // when
+        missionService.finish(mission.getId(), robot.getMacAddress(), user.getId());
+
+        // then
+        Mission unchangedMission = missionRepository.findById(mission.getId()).orElseThrow();
+
+        assertThat(unchangedMission.getMissionStatus()).isEqualTo(MissionStatus.FINISHED);
+        assertThat(unchangedMission.getRobot().getRobotStatus()).isEqualTo(com.e101.carry_porter.domain.robot.entity.RobotStatus.IDLE);
+    }
+
+    @Test
+    @DisplayName("이미 FAILED 상태인 미션에 종료 메시지가 와도 상태를 덮어쓰지 않는다")
+    void finishWithFailedMissionStatus() {
+        // given
+        User user = userRepository.save(User.createUser("finish-user-failed"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:55"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+        mission.fail();
+
+        // when
+        missionService.finish(mission.getId(), robot.getMacAddress(), user.getId());
+
+        // then
+        Mission unchangedMission = missionRepository.findById(mission.getId()).orElseThrow();
+
+        assertThat(unchangedMission.getMissionStatus()).isEqualTo(MissionStatus.FAILED);
+        assertThat(unchangedMission.getRobot().getRobotStatus()).isEqualTo(com.e101.carry_porter.domain.robot.entity.RobotStatus.BUSY);
     }
 
     @Test
