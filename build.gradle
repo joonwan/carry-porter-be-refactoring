@@ -21,6 +21,7 @@ dependencies {
 	implementation 'org.springframework.integration:spring-integration-core' // Spring Integration의 메시지, 채널, 라우터 같은 핵심 인프라 제공.
 	implementation 'org.springframework.integration:spring-integration-mqtt' // MQTT 브로커와 inbound/outbound adapter로 연동할 수 있는 모듈 제공.
 	implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5' // Spring Integration MQTT가 내부적으로 사용하는 Eclipse Paho MQTT 클라이언트.
+	implementation 'org.springframework.boot:spring-boot-starter-security' // Spring Security의 인증, 인가, 필터 체인 등 보안 기본 기능 제공.
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	compileOnly 'org.projectlombok:lombok'
