@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,5 +32,17 @@ public class MissionController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ApiResponse.success("MISSION_CREATED", "미션이 생성되었습니다.", response));
+    }
+
+    @PostMapping("/{missionId}/return")
+    public ResponseEntity<ApiResponse<Void>> returnStart(
+            @PathVariable Long missionId,
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
+    ) {
+        missionService.returnStart(missionId, authenticatedUser.userId());
+
+        return ResponseEntity.ok(
+                ApiResponse.success("MISSION_RETURN_STARTED", "로봇 복귀를 시작했습니다.", null)
+        );
     }
 }

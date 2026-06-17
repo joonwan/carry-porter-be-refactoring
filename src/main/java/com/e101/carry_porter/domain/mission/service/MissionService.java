@@ -146,6 +146,20 @@ public class MissionService {
     }
 
     @Transactional
+    public void returnStart(Long missionId, Long userId) {
+        log.info("mission 복귀 시작 요청: missionId = {}, userId = {}", missionId, userId);
+
+        Mission mission = missionRepository.findById(missionId)
+                .orElseThrow(() -> new MissionException(MissionErrorCode.MISSION_NOT_FOUND));
+
+        if (!mission.getUser().getId().equals(userId) || mission.getRobot() == null) {
+            throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
+        }
+
+        returnStart(missionId, mission.getRobot().getMacAddress(), userId);
+    }
+
+    @Transactional
     public void finish(Long missionId, String robotMacAddress, Long userId) {
         log.info("mission 종료 처리: missionId = {}, robotMacAddress = {}, userId = {}",
                 missionId, robotMacAddress, userId);

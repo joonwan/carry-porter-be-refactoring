@@ -2,6 +2,7 @@ package com.e101.carry_porter.domain.mission.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.verify;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -45,5 +46,26 @@ class MissionControllerTest extends RestControllerTestSupport {
                 .andExpect(jsonPath("$.code").value("MISSION_CREATED"))
                 .andExpect(jsonPath("$.message").value("미션이 생성되었습니다."))
                 .andExpect(jsonPath("$.data.missionId").value(10L));
+    }
+
+    @Test
+    @DisplayName("인증된 사용자가 복귀 시작 요청을 하면 200 응답을 반환한다")
+    void returnStart() throws Exception {
+        // given
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser(1L, "mission-user");
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                authenticatedUser,
+                null,
+                List.of()
+        );
+
+        // when & then
+        mockMvc.perform(post("/api/missions/{missionId}/return", 10L)
+                        .with(authentication(authenticationToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("MISSION_RETURN_STARTED"))
+                .andExpect(jsonPath("$.message").value("로봇 복귀를 시작했습니다."));
+
+        verify(missionService).returnStart(10L, 1L);
     }
 }
