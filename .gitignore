@@ -10,3 +10,4 @@ infra/mosquitto/data/*
 !infra/mosquitto/data/.gitkeep
 infra/mosquitto/log/*
 !infra/mosquitto/log/.gitkeep
+clients/**/__pycache__/
