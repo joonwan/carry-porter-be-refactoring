@@ -1,6 +1,7 @@
 package com.e101.carry_porter.domain.user.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e101.carry_porter.domain.user.entity.User;
@@ -10,6 +11,7 @@ import com.e101.carry_porter.domain.user.repository.UserRepository;
 import com.e101.carry_porter.domain.user.service.dto.request.LoginServiceRequest;
 import com.e101.carry_porter.domain.user.service.dto.response.LoginServiceResponse;
 import com.e101.carry_porter.support.TransactionalIntegrationTestSupport;
+import java.time.OffsetDateTime;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,6 +42,8 @@ class AuthServiceTest extends TransactionalIntegrationTestSupport {
         // then
         assertThat(response.accessToken()).isNotBlank();
         assertThat(response.tokenType()).isEqualTo("Bearer");
+        assertThat(response.expiresAt()).isNotBlank();
+        assertThatCode(() -> OffsetDateTime.parse(response.expiresAt())).doesNotThrowAnyException();
     }
 
     @Test

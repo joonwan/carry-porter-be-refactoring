@@ -6,6 +6,7 @@ import com.e101.carry_porter.domain.user.exception.UserException;
 import com.e101.carry_porter.domain.user.repository.UserRepository;
 import com.e101.carry_porter.domain.user.service.dto.request.LoginServiceRequest;
 import com.e101.carry_porter.domain.user.service.dto.response.LoginServiceResponse;
+import com.e101.carry_porter.global.security.JwtToken;
 import com.e101.carry_porter.global.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,9 +28,9 @@ public class AuthService {
 
         validatePassword(request.password(), user.getPassword());
 
-        String accessToken = jwtTokenProvider.createAccessToken(user.getId(), user.getUsername());
+        JwtToken jwtToken = jwtTokenProvider.createAccessToken(user.getId(), user.getUsername());
 
-        return LoginServiceResponse.of(accessToken);
+        return LoginServiceResponse.of(jwtToken.accessToken(), jwtToken.expiresAt());
     }
 
     private void validatePassword(String rawPassword, String encodedPassword) {
