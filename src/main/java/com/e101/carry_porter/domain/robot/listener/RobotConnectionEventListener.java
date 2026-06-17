@@ -5,6 +5,7 @@ import com.e101.carry_porter.domain.robot.service.RobotService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 @Slf4j
@@ -14,6 +15,7 @@ public class RobotConnectionEventListener {
 
     private final RobotService robotService;
 
+    @Async("eventTaskExecutor")
     @EventListener
     public void handleRobotConnectedMessageReceivedEvent(RobotConnectedMessageReceivedEvent event) {
         log.info("RobotConnectedMessageReceivedEvent 수신: robotMacAddress = {}", event.macAddress());

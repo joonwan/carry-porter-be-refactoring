@@ -1,7 +1,9 @@
 package com.e101.carry_porter.domain.notification.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
+import com.e101.carry_porter.domain.notification.dto.NotificationPayload;
 import com.e101.carry_porter.domain.notification.repository.NotificationEmitterRepository;
 import com.e101.carry_porter.support.IntegrationTestSupport;
 import org.junit.jupiter.api.DisplayName;
@@ -45,5 +47,23 @@ class NotificationServiceTest extends IntegrationTestSupport {
         assertThat(secondEmitter).isNotNull();
         assertThat(secondEmitter).isNotSameAs(firstEmitter);
         assertThat(notificationEmitterRepository.findByUserId(userId)).contains(secondEmitter);
+    }
+
+    @Test
+    @DisplayName("활성화된 SSE 연결이 없어도 알림 전송 시 예외 없이 종료된다")
+    void sendWithoutEmitter() {
+        // given
+        Long userId = 1L;
+        NotificationPayload payload = NotificationPayload.of(
+                "MISSION_STARTED",
+                10L,
+                userId,
+                "로봇이 출발했습니다."
+        );
+
+        // when
+        // when & then
+        assertThatCode(() -> notificationService.send(userId, payload))
+                .doesNotThrowAnyException();
     }
 }

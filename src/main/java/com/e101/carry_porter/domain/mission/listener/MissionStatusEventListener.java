@@ -8,6 +8,7 @@ import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -19,6 +20,7 @@ public class MissionStatusEventListener {
 
     private final MissionService missionService;
 
+    @Async("eventTaskExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleRobotAssignedEvent(RobotAssignedEvent event) {
         log.info("RobotAssignedEvent 수신: missionId = {}, robotId = {}, userId = {}",
@@ -26,6 +28,7 @@ public class MissionStatusEventListener {
         missionService.dispatch(event.missionId(), event.robotId(), event.userId());
     }
 
+    @Async("eventTaskExecutor")
     @EventListener
     public void handleMissionArrivedEvent(MissionArrivedEvent event) {
         log.info("MissionArrivedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}",
@@ -33,6 +36,7 @@ public class MissionStatusEventListener {
         missionService.arrive(event.missionId(), event.robotMacAddress(), event.userId());
     }
 
+    @Async("eventTaskExecutor")
     @EventListener
     public void handleMissionFinishedEvent(MissionFinishedEvent event) {
         log.info("MissionFinishedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}",
@@ -40,6 +44,7 @@ public class MissionStatusEventListener {
         missionService.finish(event.missionId(), event.robotMacAddress(), event.userId());
     }
 
+    @Async("eventTaskExecutor")
     @EventListener
     public void handleMissionFailedEvent(MissionFailedEvent event) {
         log.info("MissionFailedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}, failureCode = {}",
