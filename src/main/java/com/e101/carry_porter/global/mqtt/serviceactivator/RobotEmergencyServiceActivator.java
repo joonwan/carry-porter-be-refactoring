@@ -1,6 +1,6 @@
 package com.e101.carry_porter.global.mqtt.serviceactivator;
 
-import com.e101.carry_porter.domain.mission.event.MissionFailedEvent;
+import com.e101.carry_porter.domain.robot.event.RobotEmergencyMessageReceivedEvent;
 import com.e101.carry_porter.domain.robot.mqtt.RobotInboundMessage;
 import com.e101.carry_porter.domain.robot.mqtt.RobotInboundPayload;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +24,7 @@ public class RobotEmergencyServiceActivator {
         RobotInboundMessage inboundMessage = message.getPayload();
         RobotInboundPayload payload = inboundMessage.payload();
 
-        eventPublisher.publishEvent(new MissionFailedEvent(
+        eventPublisher.publishEvent(new RobotEmergencyMessageReceivedEvent(
                 payload.missionId(),
                 inboundMessage.macAddress(),
                 payload.userId(),
@@ -32,7 +32,7 @@ public class RobotEmergencyServiceActivator {
                 payload.message()
         ));
 
-        log.info("MissionFailedEvent 발행: missionId = {}, robotMacAddress = {}, userId = {}, failureCode = {}",
+        log.info("RobotEmergencyMessageReceivedEvent 발행: missionId = {}, robotMacAddress = {}, userId = {}, failureCode = {}",
                 payload.missionId(), inboundMessage.macAddress(), payload.userId(), payload.failureCode());
     }
 }

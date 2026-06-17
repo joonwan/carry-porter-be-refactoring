@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e101.carry_porter.domain.mission.entity.Mission;
 import com.e101.carry_porter.domain.mission.entity.MissionStatus;
+import com.e101.carry_porter.domain.mission.event.MissionArrivedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionCreatedEvent;
+import com.e101.carry_porter.domain.mission.event.MissionFailedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionFinishedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionReturnStartedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionStartedEvent;
@@ -158,6 +160,15 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         Mission arrivedMission = missionRepository.findById(mission.getId()).orElseThrow();
 
         assertThat(arrivedMission.getMissionStatus()).isEqualTo(MissionStatus.ARRIVED);
+        assertThat(events.stream(MissionArrivedEvent.class)).hasSize(1);
+        assertThat(events.stream(MissionArrivedEvent.class).findFirst()).isPresent()
+                .get()
+                .extracting(
+                        MissionArrivedEvent::missionId,
+                        MissionArrivedEvent::robotMacAddress,
+                        MissionArrivedEvent::userId
+                )
+                .containsExactly(mission.getId(), robot.getMacAddress(), user.getId());
     }
 
     @Test
@@ -322,6 +333,15 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
 
         assertThat(finishedMission.getMissionStatus()).isEqualTo(MissionStatus.FINISHED);
         assertThat(finishedMission.getRobot().getRobotStatus()).isEqualTo(com.e101.carry_porter.domain.robot.entity.RobotStatus.IDLE);
+        assertThat(events.stream(MissionFinishedEvent.class)).hasSize(1);
+        assertThat(events.stream(MissionFinishedEvent.class).findFirst()).isPresent()
+                .get()
+                .extracting(
+                        MissionFinishedEvent::missionId,
+                        MissionFinishedEvent::robotMacAddress,
+                        MissionFinishedEvent::userId
+                )
+                .containsExactly(mission.getId(), robot.getMacAddress(), user.getId());
     }
 
     @Test
@@ -424,6 +444,17 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
 
         assertThat(failedMission.getMissionStatus()).isEqualTo(MissionStatus.FAILED);
         assertThat(failedMission.getRobot().getRobotStatus()).isEqualTo(com.e101.carry_porter.domain.robot.entity.RobotStatus.BUSY);
+        assertThat(events.stream(MissionFailedEvent.class)).hasSize(1);
+        assertThat(events.stream(MissionFailedEvent.class).findFirst()).isPresent()
+                .get()
+                .extracting(
+                        MissionFailedEvent::missionId,
+                        MissionFailedEvent::robotMacAddress,
+                        MissionFailedEvent::userId,
+                        MissionFailedEvent::failureCode,
+                        MissionFailedEvent::message
+                )
+                .containsExactly(mission.getId(), robot.getMacAddress(), user.getId(), "ROBOT_EMERGENCY", "obstacle detected");
     }
 
     @Test

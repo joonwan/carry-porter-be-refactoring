@@ -3,11 +3,11 @@ package com.e101.carry_porter.domain.mission.listener;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-import com.e101.carry_porter.domain.mission.event.MissionArrivedEvent;
-import com.e101.carry_porter.domain.mission.event.MissionFailedEvent;
-import com.e101.carry_porter.domain.mission.event.MissionFinishedEvent;
 import com.e101.carry_porter.domain.mission.service.MissionService;
+import com.e101.carry_porter.domain.robot.event.RobotArrivedMessageReceivedEvent;
 import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
+import com.e101.carry_porter.domain.robot.event.RobotEmergencyMessageReceivedEvent;
+import com.e101.carry_porter.domain.robot.event.RobotReturnedMessageReceivedEvent;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,36 +38,36 @@ class MissionStatusEventListenerTest {
     }
 
     @Test
-    @DisplayName("MissionArrivedEvent를 수신하면 missionService.arrive()를 한 번 호출한다")
-    void handleMissionArrivedEvent() {
+    @DisplayName("RobotArrivedMessageReceivedEvent를 수신하면 missionService.arrive()를 한 번 호출한다")
+    void handleRobotArrivedMessageReceivedEvent() {
         // given
-        MissionArrivedEvent event = new MissionArrivedEvent(1L, "AA:BB:CC:DD:EE:01", 3L);
+        RobotArrivedMessageReceivedEvent event = new RobotArrivedMessageReceivedEvent(1L, "AA:BB:CC:DD:EE:01", 3L);
 
         // when
-        missionStatusEventListener.handleMissionArrivedEvent(event);
+        missionStatusEventListener.handleRobotArrivedMessageReceivedEvent(event);
 
         // then
         verify(missionService, times(1)).arrive(1L, "AA:BB:CC:DD:EE:01", 3L);
     }
 
     @Test
-    @DisplayName("MissionFinishedEvent를 수신하면 missionService.finish()를 한 번 호출한다")
-    void handleMissionFinishedEvent() {
+    @DisplayName("RobotReturnedMessageReceivedEvent를 수신하면 missionService.finish()를 한 번 호출한다")
+    void handleRobotReturnedMessageReceivedEvent() {
         // given
-        MissionFinishedEvent event = new MissionFinishedEvent(1L, "AA:BB:CC:DD:EE:01", 3L);
+        RobotReturnedMessageReceivedEvent event = new RobotReturnedMessageReceivedEvent(1L, "AA:BB:CC:DD:EE:01", 3L);
 
         // when
-        missionStatusEventListener.handleMissionFinishedEvent(event);
+        missionStatusEventListener.handleRobotReturnedMessageReceivedEvent(event);
 
         // then
         verify(missionService, times(1)).finish(1L, "AA:BB:CC:DD:EE:01", 3L);
     }
 
     @Test
-    @DisplayName("MissionFailedEvent를 수신하면 missionService.fail()을 한 번 호출한다")
-    void handleMissionFailedEvent() {
+    @DisplayName("RobotEmergencyMessageReceivedEvent를 수신하면 missionService.fail()을 한 번 호출한다")
+    void handleRobotEmergencyMessageReceivedEvent() {
         // given
-        MissionFailedEvent event = new MissionFailedEvent(
+        RobotEmergencyMessageReceivedEvent event = new RobotEmergencyMessageReceivedEvent(
                 1L,
                 "AA:BB:CC:DD:EE:01",
                 3L,
@@ -76,7 +76,7 @@ class MissionStatusEventListenerTest {
         );
 
         // when
-        missionStatusEventListener.handleMissionFailedEvent(event);
+        missionStatusEventListener.handleRobotEmergencyMessageReceivedEvent(event);
 
         // then
         verify(missionService, times(1)).fail(

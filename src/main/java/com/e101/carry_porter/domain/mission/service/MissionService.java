@@ -2,7 +2,9 @@ package com.e101.carry_porter.domain.mission.service;
 
 import com.e101.carry_porter.domain.mission.entity.Mission;
 import com.e101.carry_porter.domain.mission.entity.MissionStatus;
+import com.e101.carry_porter.domain.mission.event.MissionArrivedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionCreatedEvent;
+import com.e101.carry_porter.domain.mission.event.MissionFailedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionFinishedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionReturnStartedEvent;
 import com.e101.carry_porter.domain.mission.event.MissionStartedEvent;
@@ -96,8 +98,16 @@ public class MissionService {
 
         mission.arrive();
 
-        log.info("mission 도착 처리 완료: missionId = {}, robotMacAddress = {}, userId = {}",
+        eventPublisher.publishEvent(new MissionArrivedEvent(
+                missionId,
+                robotMacAddress,
+                userId
+        ));
+
+        log.info("MissionArrivedEvent 발행 완료: missionId = {}, robotMacAddress = {}, userId = {}",
                 missionId, robotMacAddress, userId);
+        log.info("mission 도착 처리 완료: missionId = {}, robotMacAddress = {}, userId = {}, mission status = {}",
+                missionId, robotMacAddress, userId, mission.getMissionStatus());
     }
 
     @Transactional
@@ -148,8 +158,16 @@ public class MissionService {
 
         mission.finish();
 
-        log.info("mission 종료 처리 완료: missionId = {}, robotMacAddress = {}, userId = {}",
+        eventPublisher.publishEvent(new MissionFinishedEvent(
+                missionId,
+                robotMacAddress,
+                userId
+        ));
+
+        log.info("MissionFinishedEvent 발행 완료: missionId = {}, robotMacAddress = {}, userId = {}",
                 missionId, robotMacAddress, userId);
+        log.info("mission 종료 처리 완료: missionId = {}, robotMacAddress = {}, userId = {}, mission status = {}",
+                missionId, robotMacAddress, userId, mission.getMissionStatus());
     }
 
     @Transactional
@@ -174,8 +192,18 @@ public class MissionService {
 
         mission.fail();
 
-        log.info("mission 실패 처리 완료: missionId = {}, robotMacAddress = {}, userId = {}, failureCode = {}",
+        eventPublisher.publishEvent(new MissionFailedEvent(
+                missionId,
+                robotMacAddress,
+                userId,
+                failureCode,
+                message
+        ));
+
+        log.info("MissionFailedEvent 발행 완료: missionId = {}, robotMacAddress = {}, userId = {}, failureCode = {}",
                 missionId, robotMacAddress, userId, failureCode);
+        log.info("mission 실패 처리 완료: missionId = {}, robotMacAddress = {}, userId = {}, failureCode = {}, mission status = {}",
+                missionId, robotMacAddress, userId, failureCode, mission.getMissionStatus());
     }
 
     private void validateDispatchTarget(Mission mission, Long robotId, Long userId) {

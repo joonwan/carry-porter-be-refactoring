@@ -10,7 +10,6 @@ import com.e101.carry_porter.domain.notification.service.NotificationService;
 import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -58,7 +57,7 @@ public class NotificationEventListener {
     }
 
     @Async("eventTaskExecutor")
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleMissionArrivedEvent(MissionArrivedEvent event) {
         log.info("MissionArrivedEvent 수신: missionId = {}, userId = {}",
                 event.missionId(), event.userId());
@@ -92,7 +91,7 @@ public class NotificationEventListener {
     }
 
     @Async("eventTaskExecutor")
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleMissionFinishedEvent(MissionFinishedEvent event) {
         log.info("MissionFinishedEvent 수신: missionId = {}, userId = {}",
                 event.missionId(), event.userId());
@@ -109,7 +108,7 @@ public class NotificationEventListener {
     }
 
     @Async("eventTaskExecutor")
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleMissionFailedEvent(MissionFailedEvent event) {
         log.info("MissionFailedEvent 수신: missionId = {}, userId = {}, failureCode = {}",
                 event.missionId(), event.userId(), event.failureCode());

@@ -1,10 +1,10 @@
 package com.e101.carry_porter.domain.mission.listener;
 
-import com.e101.carry_porter.domain.mission.event.MissionArrivedEvent;
-import com.e101.carry_porter.domain.mission.event.MissionFailedEvent;
-import com.e101.carry_porter.domain.mission.event.MissionFinishedEvent;
 import com.e101.carry_porter.domain.mission.service.MissionService;
 import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
+import com.e101.carry_porter.domain.robot.event.RobotArrivedMessageReceivedEvent;
+import com.e101.carry_porter.domain.robot.event.RobotEmergencyMessageReceivedEvent;
+import com.e101.carry_porter.domain.robot.event.RobotReturnedMessageReceivedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -30,24 +30,24 @@ public class MissionStatusEventListener {
 
     @Async("eventTaskExecutor")
     @EventListener
-    public void handleMissionArrivedEvent(MissionArrivedEvent event) {
-        log.info("MissionArrivedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}",
+    public void handleRobotArrivedMessageReceivedEvent(RobotArrivedMessageReceivedEvent event) {
+        log.info("RobotArrivedMessageReceivedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}",
                 event.missionId(), event.robotMacAddress(), event.userId());
         missionService.arrive(event.missionId(), event.robotMacAddress(), event.userId());
     }
 
     @Async("eventTaskExecutor")
     @EventListener
-    public void handleMissionFinishedEvent(MissionFinishedEvent event) {
-        log.info("MissionFinishedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}",
+    public void handleRobotReturnedMessageReceivedEvent(RobotReturnedMessageReceivedEvent event) {
+        log.info("RobotReturnedMessageReceivedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}",
                 event.missionId(), event.robotMacAddress(), event.userId());
         missionService.finish(event.missionId(), event.robotMacAddress(), event.userId());
     }
 
     @Async("eventTaskExecutor")
     @EventListener
-    public void handleMissionFailedEvent(MissionFailedEvent event) {
-        log.info("MissionFailedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}, failureCode = {}",
+    public void handleRobotEmergencyMessageReceivedEvent(RobotEmergencyMessageReceivedEvent event) {
+        log.info("RobotEmergencyMessageReceivedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}, failureCode = {}",
                 event.missionId(), event.robotMacAddress(), event.userId(), event.failureCode());
         missionService.fail(
                 event.missionId(),

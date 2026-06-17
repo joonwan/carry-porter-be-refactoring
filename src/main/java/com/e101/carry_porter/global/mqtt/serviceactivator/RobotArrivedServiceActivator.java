@@ -1,6 +1,6 @@
 package com.e101.carry_porter.global.mqtt.serviceactivator;
 
-import com.e101.carry_porter.domain.mission.event.MissionArrivedEvent;
+import com.e101.carry_porter.domain.robot.event.RobotArrivedMessageReceivedEvent;
 import com.e101.carry_porter.domain.robot.mqtt.RobotInboundMessage;
 import com.e101.carry_porter.domain.robot.mqtt.RobotInboundPayload;
 import lombok.RequiredArgsConstructor;
@@ -24,13 +24,13 @@ public class RobotArrivedServiceActivator {
         RobotInboundMessage inboundMessage = message.getPayload();
         RobotInboundPayload payload = inboundMessage.payload();
 
-        eventPublisher.publishEvent(new MissionArrivedEvent(
+        eventPublisher.publishEvent(new RobotArrivedMessageReceivedEvent(
                 payload.missionId(),
                 inboundMessage.macAddress(),
                 payload.userId()
         ));
 
-        log.info("MissionArrivedEvent 발행: missionId = {}, robotMacAddress = {}, userId = {}",
+        log.info("RobotArrivedMessageReceivedEvent 발행: missionId = {}, robotMacAddress = {}, userId = {}",
                 payload.missionId(), inboundMessage.macAddress(), payload.userId());
     }
 }
