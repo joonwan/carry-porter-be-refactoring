@@ -11,3 +11,5 @@ infra/mosquitto/data/*
 infra/mosquitto/log/*
 !infra/mosquitto/log/.gitkeep
 clients/**/__pycache__/
+frontend/node_modules/
+frontend/dist/
