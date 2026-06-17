@@ -18,7 +18,6 @@ import com.e101.carry_porter.domain.robot.service.dto.request.AssignRobotService
 import com.e101.carry_porter.domain.robot.service.dto.response.AssignRobotServiceResponse;
 import com.e101.carry_porter.domain.user.entity.User;
 import com.e101.carry_porter.domain.user.repository.UserRepository;
-import com.e101.carry_porter.support.IntegrationTestSupport;
 import com.e101.carry_porter.support.TransactionalIntegrationTestSupport;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.DisplayName;
@@ -43,6 +42,72 @@ class RobotServiceTest extends TransactionalIntegrationTestSupport {
 
     @Autowired
     private ApplicationEvents events;
+
+    @Test
+    @DisplayName("존재하지 않는 macAddress로 연결되면 새 로봇을 생성하고 IDLE 상태로 저장한다")
+    void registerOrReconnectWithNewRobot() {
+        // given
+        String macAddress = "AA:BB:CC:DD:EE:10";
+
+        // when
+        robotService.registerOrReconnect(macAddress);
+
+        // then
+        Robot registeredRobot = robotRepository.findByMacAddress(macAddress).orElseThrow();
+
+        assertThat(registeredRobot.getMacAddress()).isEqualTo(macAddress);
+        assertThat(registeredRobot.getRobotStatus()).isEqualTo(RobotStatus.IDLE);
+    }
+
+    @Test
+    @DisplayName("OFFLINE 상태의 로봇이 다시 연결되면 IDLE 상태로 변경한다")
+    void registerOrReconnectWithOfflineRobot() {
+        // given
+        Robot offlineRobot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:11"));
+        offlineRobot.toOffline();
+
+        // when
+        robotService.registerOrReconnect(offlineRobot.getMacAddress());
+
+        // then
+        Robot reconnectedRobot = robotRepository.findByMacAddress(offlineRobot.getMacAddress()).orElseThrow();
+
+        assertThat(reconnectedRobot.getId()).isEqualTo(offlineRobot.getId());
+        assertThat(reconnectedRobot.getRobotStatus()).isEqualTo(RobotStatus.IDLE);
+    }
+
+    @Test
+    @DisplayName("IDLE 상태의 로봇이 다시 연결되면 상태를 그대로 유지한다")
+    void registerOrReconnectWithIdleRobot() {
+        // given
+        Robot idleRobot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:12"));
+
+        // when
+        robotService.registerOrReconnect(idleRobot.getMacAddress());
+
+        // then
+        Robot reconnectedRobot = robotRepository.findByMacAddress(idleRobot.getMacAddress()).orElseThrow();
+
+        assertThat(reconnectedRobot.getId()).isEqualTo(idleRobot.getId());
+        assertThat(reconnectedRobot.getRobotStatus()).isEqualTo(RobotStatus.IDLE);
+    }
+
+    @Test
+    @DisplayName("BUSY 상태의 로봇이 다시 연결되면 상태를 그대로 유지한다")
+    void registerOrReconnectWithBusyRobot() {
+        // given
+        Robot busyRobot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:13"));
+        busyRobot.toBusy();
+
+        // when
+        robotService.registerOrReconnect(busyRobot.getMacAddress());
+
+        // then
+        Robot reconnectedRobot = robotRepository.findByMacAddress(busyRobot.getMacAddress()).orElseThrow();
+
+        assertThat(reconnectedRobot.getId()).isEqualTo(busyRobot.getId());
+        assertThat(reconnectedRobot.getRobotStatus()).isEqualTo(RobotStatus.BUSY);
+    }
 
     @Test
     @DisplayName("CREATED 상태의 미션에 IDLE 로봇을 배정하고 RobotAssignedEvent를 발행한다")

@@ -30,6 +30,18 @@ public class RobotService {
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
+    public void registerOrReconnect(String macAddress) {
+        log.info("robot 등록 또는 재연결 처리 시작: macAddress = {}", macAddress);
+
+        Robot robot = robotRepository.findByMacAddress(macAddress)
+                .map(this::synchronizeRobotStatus)
+                .orElseGet(() -> createConnectedRobot(macAddress));
+
+        log.info("robot 등록 또는 재연결 처리 완료: robotId = {}, macAddress = {}, robotStatus = {}",
+                robot.getId(), robot.getMacAddress(), robot.getRobotStatus());
+    }
+
+    @Transactional
     public AssignRobotServiceResponse assignRobot(AssignRobotServiceRequest request) {
 
         log.info("robot 배정 시작: missionId = {}", request.missionId());
@@ -67,5 +79,18 @@ public class RobotService {
         if (mission.getMissionStatus() != MissionStatus.CREATED) {
             throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
         }
+    }
+
+    private Robot synchronizeRobotStatus(Robot robot) {
+        if (robot.getRobotStatus() == RobotStatus.OFFLINE) {
+            robot.toIdle();
+        }
+
+        return robot;
+    }
+
+    private Robot createConnectedRobot(String macAddress) {
+        Robot robot = Robot.createRobot(macAddress);
+        return robotRepository.save(robot);
     }
 }

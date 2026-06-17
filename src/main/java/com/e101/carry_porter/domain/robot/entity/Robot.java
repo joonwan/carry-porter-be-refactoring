@@ -47,6 +47,10 @@ public class Robot extends BaseEntity {
         this.robotStatus = RobotStatus.BUSY;
     }
 
+    public void toOffline() {
+        this.robotStatus = RobotStatus.OFFLINE;
+    }
+
     @Builder
     private Robot(String macAddress, RobotStatus robotStatus) {
         this.macAddress = macAddress;
