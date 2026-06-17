@@ -17,6 +17,7 @@ import com.e101.carry_porter.domain.user.entity.User;
 import com.e101.carry_porter.domain.user.exception.UserErrorCode;
 import com.e101.carry_porter.domain.user.exception.UserException;
 import com.e101.carry_porter.domain.user.repository.UserRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -29,6 +30,14 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MissionService {
 
+    private static final List<MissionStatus> ACTIVE_MISSION_STATUSES = List.of(
+            MissionStatus.CREATED,
+            MissionStatus.ASSIGNED,
+            MissionStatus.DISPATCHED,
+            MissionStatus.ARRIVED,
+            MissionStatus.RETURNING
+    );
+
     private final MissionRepository missionRepository;
     private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -39,6 +48,8 @@ public class MissionService {
         log.info("mission 생성 요청: userId = {}", request.userId());
         User user = userRepository.findById(request.userId())
                 .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+
+        validateNoActiveMission(user.getId());
 
         Mission mission = Mission.createMission(user);
         Mission savedMission = missionRepository.save(mission);
@@ -247,6 +258,12 @@ public class MissionService {
     private void validateFinishStatus(Mission mission) {
         if (mission.getMissionStatus() != MissionStatus.RETURNING) {
             throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
+        }
+    }
+
+    private void validateNoActiveMission(Long userId) {
+        if (missionRepository.existsByUserIdAndMissionStatusIn(userId, ACTIVE_MISSION_STATUSES)) {
+            throw new MissionException(MissionErrorCode.MISSION_ALREADY_IN_PROGRESS);
         }
     }
 

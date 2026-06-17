@@ -83,6 +83,21 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("사용자에게 진행 중인 미션이 이미 있으면 MissionException을 던진다")
+    void createMissionWithActiveMission() {
+        // given
+        User user = userRepository.save(User.createUser("active-mission-user", "password"));
+        missionRepository.save(Mission.createMission(user));
+        CreateMissionServiceRequest request = new CreateMissionServiceRequest(user.getId());
+
+        // when & then
+        assertThatThrownBy(() -> missionService.createMission(request))
+                .isInstanceOf(MissionException.class)
+                .extracting(exception -> ((MissionException) exception).getErrorCode())
+                .isEqualTo(MissionErrorCode.MISSION_ALREADY_IN_PROGRESS);
+    }
+
+    @Test
     @DisplayName("배정된 미션을 시작 처리하면 DISPATCHED 상태로 변경하고 MissionStartedEvent를 발행한다")
     void dispatch() {
         // given
