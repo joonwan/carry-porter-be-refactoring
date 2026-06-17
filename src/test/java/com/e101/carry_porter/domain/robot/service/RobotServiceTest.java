@@ -114,7 +114,7 @@ class RobotServiceTest extends TransactionalIntegrationTestSupport {
     void assignRobot() {
         // given
         log.info("assign robot test 시작");
-        User user = userRepository.save(User.createUser("tester"));
+        User user = userRepository.save(User.createUser("tester", "password"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:01"));
         AssignRobotServiceRequest request = new AssignRobotServiceRequest(mission.getId());
@@ -145,7 +145,7 @@ class RobotServiceTest extends TransactionalIntegrationTestSupport {
     void assignRobotWithInvalidMissionStatus() {
         // given
         log.info("assignRobotWithInvalidMissionStatus test 시작");
-        User user = userRepository.save(User.createUser("tester2"));
+        User user = userRepository.save(User.createUser("tester2", "password"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         Robot firstRobot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:02"));
         robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:03"));
@@ -165,7 +165,7 @@ class RobotServiceTest extends TransactionalIntegrationTestSupport {
     void assignRobotWithoutAvailableRobot() {
         // given
         log.info("assignRobotWithoutAvailableRobot test 시작");
-        User user = userRepository.save(User.createUser("tester3"));
+        User user = userRepository.save(User.createUser("tester3", "password"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         Robot busyRobot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:04"));
         busyRobot.toBusy();

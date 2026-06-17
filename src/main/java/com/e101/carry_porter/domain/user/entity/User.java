@@ -26,9 +26,13 @@ public class User extends BaseEntity {
     @Column(nullable = false, unique = true, length = 50)
     private String username;
 
-    public static User createUser(String username) {
+    @Column(nullable = false, length = 255)
+    private String password;
+
+    public static User createUser(String username, String password) {
         return User.builder()
                 .username(username)
+                .password(password)
                 .build();
     }
 
@@ -36,8 +40,13 @@ public class User extends BaseEntity {
         this.username = username;
     }
 
+    public void updatePassword(String password) {
+        this.password = password;
+    }
+
     @Builder
-    private User(String username) {
+    private User(String username, String password) {
         this.username = username;
+        this.password = password;
     }
 }

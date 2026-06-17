@@ -47,7 +47,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("사용자가 존재하면 미션을 생성하고 CREATED 상태로 저장한다")
     void createMission() {
         // given
-        User user = userRepository.save(User.createUser("tester"));
+        User user = userRepository.save(User.createUser("tester", "password"));
         CreateMissionServiceRequest request = new CreateMissionServiceRequest(user.getId());
 
         // when
@@ -84,7 +84,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("배정된 미션을 시작 처리하면 DISPATCHED 상태로 변경하고 MissionStartedEvent를 발행한다")
     void dispatch() {
         // given
-        User user = userRepository.save(User.createUser("dispatch-user"));
+        User user = userRepository.save(User.createUser("dispatch-user", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:21"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -112,8 +112,8 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("미션의 사용자나 로봇이 일치하지 않으면 MissionException을 던진다")
     void dispatchWithInvalidDispatchTarget() {
         // given
-        User user = userRepository.save(User.createUser("dispatch-user-2"));
-        User anotherUser = userRepository.save(User.createUser("dispatch-user-3"));
+        User user = userRepository.save(User.createUser("dispatch-user-2", "password"));
+        User anotherUser = userRepository.save(User.createUser("dispatch-user-3", "password"));
         Robot assignedRobot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:22"));
         Robot anotherRobot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:23"));
         Mission mission = missionRepository.save(Mission.createMission(user));
@@ -130,7 +130,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("미션 상태가 ASSIGNED가 아니면 MissionException을 던진다")
     void dispatchWithInvalidMissionStatus() {
         // given
-        User user = userRepository.save(User.createUser("dispatch-user-4"));
+        User user = userRepository.save(User.createUser("dispatch-user-4", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:24"));
         Mission mission = missionRepository.save(Mission.createMission(user));
 
@@ -145,7 +145,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("이동 중인 미션을 도착 처리하면 ARRIVED 상태로 변경한다")
     void arrive() {
         // given
-        User user = userRepository.save(User.createUser("arrive-user"));
+        User user = userRepository.save(User.createUser("arrive-user", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:31"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -164,7 +164,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("이미 ARRIVED 상태인 미션에 도착 메시지가 다시 와도 예외 없이 그대로 유지한다")
     void arriveWithAlreadyArrivedMissionStatus() {
         // given
-        User user = userRepository.save(User.createUser("arrive-user-duplicate"));
+        User user = userRepository.save(User.createUser("arrive-user-duplicate", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:34"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -185,7 +185,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("이미 RETURNING 상태인 미션에 늦게 도착 메시지가 와도 상태를 덮어쓰지 않는다")
     void arriveWithReturningMissionStatus() {
         // given
-        User user = userRepository.save(User.createUser("arrive-user-returning"));
+        User user = userRepository.save(User.createUser("arrive-user-returning", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:35"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -206,8 +206,8 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("도착 처리 시 미션의 사용자나 로봇 mac address가 일치하지 않으면 MissionException을 던진다")
     void arriveWithInvalidArrivalTarget() {
         // given
-        User user = userRepository.save(User.createUser("arrive-user-2"));
-        User anotherUser = userRepository.save(User.createUser("arrive-user-3"));
+        User user = userRepository.save(User.createUser("arrive-user-2", "password"));
+        User anotherUser = userRepository.save(User.createUser("arrive-user-3", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:32"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -224,7 +224,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("미션 상태가 DISPATCHED가 아니면 도착 처리 시 MissionException을 던진다")
     void arriveWithInvalidMissionStatus() {
         // given
-        User user = userRepository.save(User.createUser("arrive-user-4"));
+        User user = userRepository.save(User.createUser("arrive-user-4", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:33"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -240,7 +240,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("도착한 미션을 복귀 시작 처리하면 RETURNING 상태로 변경하고 MissionReturnStartedEvent를 발행한다")
     void returnStart() {
         // given
-        User user = userRepository.save(User.createUser("return-user"));
+        User user = userRepository.save(User.createUser("return-user", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:41"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -270,8 +270,8 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("복귀 시작 처리 시 미션의 사용자나 로봇 mac address가 일치하지 않으면 MissionException을 던진다")
     void returnStartWithInvalidTarget() {
         // given
-        User user = userRepository.save(User.createUser("return-user-2"));
-        User anotherUser = userRepository.save(User.createUser("return-user-3"));
+        User user = userRepository.save(User.createUser("return-user-2", "password"));
+        User anotherUser = userRepository.save(User.createUser("return-user-3", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:42"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -289,7 +289,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("미션 상태가 ARRIVED가 아니면 복귀 시작 처리 시 MissionException을 던진다")
     void returnStartWithInvalidMissionStatus() {
         // given
-        User user = userRepository.save(User.createUser("return-user-4"));
+        User user = userRepository.save(User.createUser("return-user-4", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:43"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -306,7 +306,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("복귀 중인 미션을 종료 처리하면 FINISHED 상태로 변경되고 로봇은 IDLE 상태가 된다")
     void finish() {
         // given
-        User user = userRepository.save(User.createUser("finish-user"));
+        User user = userRepository.save(User.createUser("finish-user", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:51"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -328,7 +328,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("이미 FINISHED 상태인 미션에 종료 메시지가 다시 와도 예외 없이 그대로 유지한다")
     void finishWithAlreadyFinishedMissionStatus() {
         // given
-        User user = userRepository.save(User.createUser("finish-user-duplicate"));
+        User user = userRepository.save(User.createUser("finish-user-duplicate", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:54"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -351,7 +351,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("이미 FAILED 상태인 미션에 종료 메시지가 와도 상태를 덮어쓰지 않는다")
     void finishWithFailedMissionStatus() {
         // given
-        User user = userRepository.save(User.createUser("finish-user-failed"));
+        User user = userRepository.save(User.createUser("finish-user-failed", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:55"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -372,8 +372,8 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("종료 처리 시 미션의 사용자나 로봇 mac address가 일치하지 않으면 MissionException을 던진다")
     void finishWithInvalidTarget() {
         // given
-        User user = userRepository.save(User.createUser("finish-user-2"));
-        User anotherUser = userRepository.save(User.createUser("finish-user-3"));
+        User user = userRepository.save(User.createUser("finish-user-2", "password"));
+        User anotherUser = userRepository.save(User.createUser("finish-user-3", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:52"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -392,7 +392,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("미션 상태가 RETURNING이 아니면 종료 처리 시 MissionException을 던진다")
     void finishWithInvalidMissionStatus() {
         // given
-        User user = userRepository.save(User.createUser("finish-user-4"));
+        User user = userRepository.save(User.createUser("finish-user-4", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:53"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -410,7 +410,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("진행 중인 미션을 실패 처리하면 FAILED 상태로 변경되고 로봇은 기존 BUSY 상태를 유지한다")
     void fail() {
         // given
-        User user = userRepository.save(User.createUser("fail-user"));
+        User user = userRepository.save(User.createUser("fail-user", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:61"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -430,8 +430,8 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("실패 처리 시 미션의 사용자나 로봇 mac address가 일치하지 않으면 MissionException을 던진다")
     void failWithInvalidTarget() {
         // given
-        User user = userRepository.save(User.createUser("fail-user-2"));
-        User anotherUser = userRepository.save(User.createUser("fail-user-3"));
+        User user = userRepository.save(User.createUser("fail-user-2", "password"));
+        User anotherUser = userRepository.save(User.createUser("fail-user-3", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:62"));
         Mission mission = missionRepository.save(Mission.createMission(user));
         mission.assignRobot(robot);
@@ -454,7 +454,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("이미 FINISHED 상태인 미션에 실패 메시지가 와도 상태를 덮어쓰지 않는다")
     void failWithFinishedMissionStatus() {
         // given
-        User user = userRepository.save(User.createUser("fail-user-4"));
+        User user = userRepository.save(User.createUser("fail-user-4", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:63"));
         Mission finishedMission = missionRepository.save(Mission.createMission(user));
         finishedMission.assignRobot(robot);
@@ -483,7 +483,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("이미 FAILED 상태인 미션에 실패 메시지가 다시 와도 예외 없이 그대로 유지한다")
     void failWithAlreadyFailedMissionStatus() {
         // given
-        User user = userRepository.save(User.createUser("fail-user-5"));
+        User user = userRepository.save(User.createUser("fail-user-5", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:64"));
         Mission failedMission = missionRepository.save(Mission.createMission(user));
         failedMission.assignRobot(robot);

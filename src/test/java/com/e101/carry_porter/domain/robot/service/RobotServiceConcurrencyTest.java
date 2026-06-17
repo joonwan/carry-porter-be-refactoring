@@ -59,7 +59,7 @@ class RobotServiceConcurrencyTest extends IntegrationTestSupport {
 
         log.info("테스트용 사용자와 미션 저장");
         for (int i = 1; i <= USER_COUNT; i++) {
-            User user = userRepository.saveAndFlush(User.createUser("concurrent-user-" + i));
+            User user = userRepository.saveAndFlush(User.createUser("concurrent-user-" + i, "password"));
             Mission mission = missionRepository.saveAndFlush(Mission.createMission(user));
             missionIds.add(mission.getId());
         }
