@@ -11,6 +11,7 @@ import com.e101.carry_porter.domain.mission.repository.MissionRepository;
 import com.e101.carry_porter.domain.robot.entity.Robot;
 import com.e101.carry_porter.domain.robot.entity.RobotStatus;
 import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
+import com.e101.carry_porter.domain.robot.event.RobotAssignmentFailedEvent;
 import com.e101.carry_porter.domain.robot.exception.RobotErrorCode;
 import com.e101.carry_porter.domain.robot.exception.RobotException;
 import com.e101.carry_porter.domain.robot.repository.RobotRepository;
@@ -177,5 +178,21 @@ class RobotServiceTest extends TransactionalIntegrationTestSupport {
                 .isInstanceOf(RobotException.class)
                 .extracting(exception -> ((RobotException) exception).getErrorCode())
                 .isEqualTo(RobotErrorCode.AVAILABLE_ROBOT_NOT_FOUND);
+
+        assertThat(events.stream(RobotAssignmentFailedEvent.class)).hasSize(1);
+        assertThat(events.stream(RobotAssignmentFailedEvent.class).findFirst()).isPresent()
+                .get()
+                .extracting(
+                        RobotAssignmentFailedEvent::missionId,
+                        RobotAssignmentFailedEvent::userId,
+                        RobotAssignmentFailedEvent::failureCode,
+                        RobotAssignmentFailedEvent::message
+                )
+                .containsExactly(
+                        mission.getId(),
+                        user.getId(),
+                        RobotErrorCode.AVAILABLE_ROBOT_NOT_FOUND.getCode(),
+                        RobotErrorCode.AVAILABLE_ROBOT_NOT_FOUND.getMessage()
+                );
     }
 }

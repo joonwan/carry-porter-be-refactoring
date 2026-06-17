@@ -231,6 +231,41 @@ public class MissionService {
                 missionId, robotMacAddress, userId, failureCode, mission.getMissionStatus());
     }
 
+    @Transactional
+    public void failAssignment(Long missionId, Long userId, String failureCode, String message) {
+        log.info("mission 배정 실패 처리: missionId = {}, userId = {}, failureCode = {}, message = {}",
+                missionId, userId, failureCode, message);
+
+        Mission mission = missionRepository.findById(missionId)
+                .orElseThrow(() -> new MissionException(MissionErrorCode.MISSION_NOT_FOUND));
+
+        if (!mission.getUser().getId().equals(userId)) {
+            throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
+        }
+
+        if (mission.getMissionStatus() == MissionStatus.FAILED) {
+            log.info("이미 실패 처리된 mission 이므로 배정 실패 처리를 건너뜁니다: missionId = {}", missionId);
+            return;
+        }
+
+        if (mission.getMissionStatus() != MissionStatus.CREATED) {
+            throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
+        }
+
+        mission.fail();
+
+        eventPublisher.publishEvent(new MissionFailedEvent(
+                missionId,
+                null,
+                userId,
+                failureCode,
+                message
+        ));
+
+        log.info("MissionFailedEvent 발행 완료: missionId = {}, userId = {}, failureCode = {}",
+                missionId, userId, failureCode);
+    }
+
     private void validateDispatchTarget(Mission mission, Long robotId, Long userId) {
         if (!mission.getUser().getId().equals(userId)) {
             throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);

@@ -2,6 +2,7 @@ package com.e101.carry_porter.domain.mission.listener;
 
 import com.e101.carry_porter.domain.mission.service.MissionService;
 import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
+import com.e101.carry_porter.domain.robot.event.RobotAssignmentFailedEvent;
 import com.e101.carry_porter.domain.robot.event.RobotArrivedMessageReceivedEvent;
 import com.e101.carry_porter.domain.robot.event.RobotEmergencyMessageReceivedEvent;
 import com.e101.carry_porter.domain.robot.event.RobotReturnedMessageReceivedEvent;
@@ -26,6 +27,19 @@ public class MissionStatusEventListener {
         log.info("RobotAssignedEvent 수신: missionId = {}, robotId = {}, userId = {}",
                 event.missionId(), event.robotId(), event.userId());
         missionService.dispatch(event.missionId(), event.robotId(), event.userId());
+    }
+
+    @Async("eventTaskExecutor")
+    @EventListener
+    public void handleRobotAssignmentFailedEvent(RobotAssignmentFailedEvent event) {
+        log.info("RobotAssignmentFailedEvent 수신: missionId = {}, userId = {}, failureCode = {}",
+                event.missionId(), event.userId(), event.failureCode());
+        missionService.failAssignment(
+                event.missionId(),
+                event.userId(),
+                event.failureCode(),
+                event.message()
+        );
     }
 
     @Async("eventTaskExecutor")

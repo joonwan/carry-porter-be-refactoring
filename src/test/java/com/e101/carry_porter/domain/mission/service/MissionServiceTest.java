@@ -473,6 +473,45 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("배정 전 로봇 배정 실패를 처리하면 FAILED 상태로 변경하고 MissionFailedEvent를 발행한다")
+    void failAssignment() {
+        // given
+        User user = userRepository.save(User.createUser("fail-assignment-user", "password"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+
+        // when
+        missionService.failAssignment(
+                mission.getId(),
+                user.getId(),
+                "ROBOT_404",
+                "배정 가능한 로봇이 없습니다."
+        );
+
+        // then
+        Mission failedMission = missionRepository.findById(mission.getId()).orElseThrow();
+
+        assertThat(failedMission.getMissionStatus()).isEqualTo(MissionStatus.FAILED);
+        assertThat(failedMission.getRobot()).isNull();
+        assertThat(events.stream(MissionFailedEvent.class)).hasSize(1);
+        assertThat(events.stream(MissionFailedEvent.class).findFirst()).isPresent()
+                .get()
+                .extracting(
+                        MissionFailedEvent::missionId,
+                        MissionFailedEvent::robotMacAddress,
+                        MissionFailedEvent::userId,
+                        MissionFailedEvent::failureCode,
+                        MissionFailedEvent::message
+                )
+                .containsExactly(
+                        mission.getId(),
+                        null,
+                        user.getId(),
+                        "ROBOT_404",
+                        "배정 가능한 로봇이 없습니다."
+                );
+    }
+
+    @Test
     @DisplayName("실패 처리 시 미션의 사용자나 로봇 mac address가 일치하지 않으면 MissionException을 던진다")
     void failWithInvalidTarget() {
         // given

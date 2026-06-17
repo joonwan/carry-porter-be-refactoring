@@ -8,6 +8,7 @@ import com.e101.carry_porter.domain.mission.repository.MissionRepository;
 import com.e101.carry_porter.domain.robot.entity.Robot;
 import com.e101.carry_porter.domain.robot.entity.RobotStatus;
 import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
+import com.e101.carry_porter.domain.robot.event.RobotAssignmentFailedEvent;
 import com.e101.carry_porter.domain.robot.exception.RobotErrorCode;
 import com.e101.carry_porter.domain.robot.exception.RobotException;
 import com.e101.carry_porter.domain.robot.repository.RobotRepository;
@@ -57,7 +58,12 @@ public class RobotService {
 
         // 가용 로봇 조회 (동시성 제어)
         Robot robot = robotRepository.findFirstByRobotStatusOrderByIdAsc(RobotStatus.IDLE)
-                .orElseThrow(() -> new RobotException(RobotErrorCode.AVAILABLE_ROBOT_NOT_FOUND));
+                .orElse(null);
+
+        if (robot == null) {
+            publishRobotAssignmentFailedEvent(mission, RobotErrorCode.AVAILABLE_ROBOT_NOT_FOUND);
+            throw new RobotException(RobotErrorCode.AVAILABLE_ROBOT_NOT_FOUND);
+        }
 
         // mission 에 로봇 할당 + robot 상태를 BUSY 로 변경
         mission.assignRobot(robot);
@@ -79,6 +85,18 @@ public class RobotService {
         if (mission.getMissionStatus() != MissionStatus.CREATED) {
             throw new MissionException(MissionErrorCode.INVALID_MISSION_STATUS);
         }
+    }
+
+    private void publishRobotAssignmentFailedEvent(Mission mission, RobotErrorCode errorCode) {
+        eventPublisher.publishEvent(new RobotAssignmentFailedEvent(
+                mission.getId(),
+                mission.getUser().getId(),
+                errorCode.getCode(),
+                errorCode.getMessage()
+        ));
+
+        log.warn("RobotAssignmentFailedEvent 발행: missionId = {}, userId = {}, failureCode = {}",
+                mission.getId(), mission.getUser().getId(), errorCode.getCode());
     }
 
     private Robot synchronizeRobotStatus(Robot robot) {

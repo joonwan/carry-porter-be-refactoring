@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import com.e101.carry_porter.domain.mission.service.MissionService;
 import com.e101.carry_porter.domain.robot.event.RobotArrivedMessageReceivedEvent;
 import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
+import com.e101.carry_porter.domain.robot.event.RobotAssignmentFailedEvent;
 import com.e101.carry_porter.domain.robot.event.RobotEmergencyMessageReceivedEvent;
 import com.e101.carry_porter.domain.robot.event.RobotReturnedMessageReceivedEvent;
 import org.junit.jupiter.api.DisplayName;
@@ -35,6 +36,29 @@ class MissionStatusEventListenerTest {
 
         // then
         verify(missionService, times(1)).dispatch(1L, 2L, 3L);
+    }
+
+    @Test
+    @DisplayName("RobotAssignmentFailedEvent를 수신하면 missionService.failAssignment()를 한 번 호출한다")
+    void handleRobotAssignmentFailedEvent() {
+        // given
+        RobotAssignmentFailedEvent event = new RobotAssignmentFailedEvent(
+                1L,
+                3L,
+                "ROBOT_404",
+                "배정 가능한 로봇이 없습니다."
+        );
+
+        // when
+        missionStatusEventListener.handleRobotAssignmentFailedEvent(event);
+
+        // then
+        verify(missionService, times(1)).failAssignment(
+                1L,
+                3L,
+                "ROBOT_404",
+                "배정 가능한 로봇이 없습니다."
+        );
     }
 
     @Test
