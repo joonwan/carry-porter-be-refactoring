@@ -25,6 +25,7 @@ import org.springframework.util.StringUtils;
 public class RobotMqttInboundFlowConfig {
 
     private static final String EVENT_CONNECTED = "connected";
+    private static final String EVENT_DISCONNECTED = "disconnected";
     private static final String EVENT_ARRIVED = "arrived";
     private static final String EVENT_RETURNED = "returned";
     private static final String EVENT_EMERGENCY = "emergency";
@@ -55,6 +56,7 @@ public class RobotMqttInboundFlowConfig {
     @Router(inputChannel = "robotEventRouterChannel")
     public AbstractMessageRouter robotEventRouter(
             MessageChannel robotConnectedChannel,
+            MessageChannel robotDisconnectedChannel,
             MessageChannel robotArrivedChannel,
             MessageChannel robotReturnedChannel,
             MessageChannel robotEmergencyChannel
@@ -66,6 +68,7 @@ public class RobotMqttInboundFlowConfig {
 
                 return switch (inboundMessage.eventName()) {
                     case EVENT_CONNECTED -> List.of(robotConnectedChannel);
+                    case EVENT_DISCONNECTED -> List.of(robotDisconnectedChannel);
                     case EVENT_ARRIVED -> List.of(robotArrivedChannel);
                     case EVENT_RETURNED -> List.of(robotReturnedChannel);
                     case EVENT_EMERGENCY -> List.of(robotEmergencyChannel);

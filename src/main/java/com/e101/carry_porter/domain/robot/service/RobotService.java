@@ -43,6 +43,20 @@ public class RobotService {
     }
 
     @Transactional
+    public void disconnect(String macAddress) {
+        log.info("robot 연결 끊김 처리 시작: macAddress = {}", macAddress);
+
+        Robot robot = robotRepository.findByMacAddress(macAddress)
+                .orElseThrow(() -> new RobotException(RobotErrorCode.ROBOT_NOT_FOUND));
+
+        RobotStatus previousStatus = robot.getRobotStatus();
+        robot.toOffline();
+
+        log.info("robot 상태가 OFFLINE 으로 변경되었습니다: robotId = {}, macAddress = {}, previousStatus = {}, currentStatus = {}",
+                robot.getId(), robot.getMacAddress(), previousStatus, robot.getRobotStatus());
+    }
+
+    @Transactional
     public AssignRobotServiceResponse assignRobot(AssignRobotServiceRequest request) {
 
         log.info("robot 배정 시작: missionId = {}", request.missionId());

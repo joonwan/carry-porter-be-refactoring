@@ -21,6 +21,11 @@ public class RobotMqttInboundChannelConfig {
     }
 
     @Bean
+    public MessageChannel robotDisconnectedChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
     public MessageChannel robotArrivedChannel() {
         return new DirectChannel();
     }

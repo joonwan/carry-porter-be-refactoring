@@ -111,6 +111,37 @@ class RobotServiceTest extends TransactionalIntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("로봇 연결이 끊기면 상태를 OFFLINE으로 변경한다")
+    void disconnect() {
+        // given
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:14"));
+
+        // when
+        robotService.disconnect(robot.getMacAddress());
+
+        // then
+        Robot disconnectedRobot = robotRepository.findByMacAddress(robot.getMacAddress()).orElseThrow();
+
+        assertThat(disconnectedRobot.getRobotStatus()).isEqualTo(RobotStatus.OFFLINE);
+    }
+
+    @Test
+    @DisplayName("BUSY 상태의 로봇 연결이 끊겨도 상태를 OFFLINE으로 변경한다")
+    void disconnectWithBusyRobot() {
+        // given
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:15"));
+        robot.toBusy();
+
+        // when
+        robotService.disconnect(robot.getMacAddress());
+
+        // then
+        Robot disconnectedRobot = robotRepository.findByMacAddress(robot.getMacAddress()).orElseThrow();
+
+        assertThat(disconnectedRobot.getRobotStatus()).isEqualTo(RobotStatus.OFFLINE);
+    }
+
+    @Test
     @DisplayName("CREATED 상태의 미션에 IDLE 로봇을 배정하고 RobotAssignedEvent를 발행한다")
     void assignRobot() {
         // given
