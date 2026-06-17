@@ -22,9 +22,12 @@ dependencies {
 	implementation 'org.springframework.integration:spring-integration-mqtt' // MQTT 브로커와 inbound/outbound adapter로 연동할 수 있는 모듈 제공.
 	implementation 'org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5' // Spring Integration MQTT가 내부적으로 사용하는 Eclipse Paho MQTT 클라이언트.
 	implementation 'org.springframework.boot:spring-boot-starter-security' // Spring Security의 인증, 인가, 필터 체인 등 보안 기본 기능 제공.
+	implementation 'io.jsonwebtoken:jjwt-api:0.13.0' // JWT 생성과 검증에 사용하는 JJWT 공개 API.
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	compileOnly 'org.projectlombok:lombok'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.13.0' // JJWT 내부 구현체. 런타임에서 실제 JWT 처리 로직 제공.
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.13.0' // JJWT가 claim JSON 직렬화/역직렬화에 Jackson 사용.
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
