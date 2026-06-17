@@ -16,6 +16,7 @@ import org.springframework.integration.router.AbstractMessageRouter;
 import org.springframework.integration.mqtt.support.MqttHeaders;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
+import org.springframework.util.StringUtils;
 
 @Slf4j
 @Configuration
@@ -23,6 +24,7 @@ import org.springframework.messaging.MessageChannel;
 @ConditionalOnProperty(prefix = "carry-porter.mqtt", name = "enabled", havingValue = "true")
 public class RobotMqttInboundFlowConfig {
 
+    private static final String EVENT_CONNECTED = "connected";
     private static final String EVENT_ARRIVED = "arrived";
     private static final String EVENT_RETURNED = "returned";
     private static final String EVENT_EMERGENCY = "emergency";
@@ -40,7 +42,9 @@ public class RobotMqttInboundFlowConfig {
         log.info("MQTT inbound message 수신: topic = {}, payload = {}", topic, payload);
 
         try {
-            RobotInboundPayload inboundPayload = objectMapper.readValue(payload, RobotInboundPayload.class);
+            RobotInboundPayload inboundPayload = StringUtils.hasText(payload)
+                    ? objectMapper.readValue(payload, RobotInboundPayload.class)
+                    : new RobotInboundPayload(null, null, null, null);
             return new RobotInboundMessage(macAddress, eventName, inboundPayload);
         } catch (Exception exception) {
             throw new IllegalArgumentException("MQTT inbound payload 역직렬화에 실패했습니다.", exception);
@@ -50,6 +54,7 @@ public class RobotMqttInboundFlowConfig {
     @Bean
     @Router(inputChannel = "robotEventRouterChannel")
     public AbstractMessageRouter robotEventRouter(
+            MessageChannel robotConnectedChannel,
             MessageChannel robotArrivedChannel,
             MessageChannel robotReturnedChannel,
             MessageChannel robotEmergencyChannel
@@ -60,6 +65,7 @@ public class RobotMqttInboundFlowConfig {
                 RobotInboundMessage inboundMessage = (RobotInboundMessage) message.getPayload();
 
                 return switch (inboundMessage.eventName()) {
+                    case EVENT_CONNECTED -> List.of(robotConnectedChannel);
                     case EVENT_ARRIVED -> List.of(robotArrivedChannel);
                     case EVENT_RETURNED -> List.of(robotReturnedChannel);
                     case EVENT_EMERGENCY -> List.of(robotEmergencyChannel);
