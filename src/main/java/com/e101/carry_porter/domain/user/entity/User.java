@@ -29,6 +29,9 @@ public class User extends BaseEntity {
     @Column(nullable = false, length = 255)
     private String password;
 
+    @Column(length = 2000)
+    private String refreshToken;
+
     public static User createUser(String username, String password) {
         return User.builder()
                 .username(username)
@@ -44,9 +47,14 @@ public class User extends BaseEntity {
         this.password = password;
     }
 
+    public void updateRefreshToken(String refreshToken) {
+        this.refreshToken = refreshToken;
+    }
+
     @Builder
-    private User(String username, String password) {
+    private User(String username, String password, String refreshToken) {
         this.username = username;
         this.password = password;
+        this.refreshToken = refreshToken;
     }
 }

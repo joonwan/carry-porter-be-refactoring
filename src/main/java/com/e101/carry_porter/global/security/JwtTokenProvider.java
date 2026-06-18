@@ -21,18 +21,29 @@ public class JwtTokenProvider {
 
     public JwtToken createAccessToken(Long userId, String username) {
         Date now = new Date();
-        Date expiration = new Date(now.getTime() + jwtProperties.getAccessTokenExpiration());
+        Date accessTokenExpiration = new Date(now.getTime() + jwtProperties.getAccessTokenExpiration());
+        Date refreshTokenExpiration = new Date(now.getTime() + jwtProperties.getRefreshTokenExpiration());
+
         String accessToken = Jwts.builder()
                 .subject(String.valueOf(userId))        // token 소유 주체
                 .claim("username", username)     // payload
                 .issuedAt(now)
-                .expiration(expiration)
+                .expiration(accessTokenExpiration)
+                .signWith(getSigningKey())
+                .compact();
+
+        String refreshToken = Jwts.builder()
+                .subject(String.valueOf(userId))
+                .claim("username", username)
+                .issuedAt(now)
+                .expiration(refreshTokenExpiration)
                 .signWith(getSigningKey())
                 .compact();
 
         return new JwtToken(
                 accessToken,
-                OffsetDateTime.ofInstant(expiration.toInstant(), ZoneOffset.UTC)
+                refreshToken,
+                OffsetDateTime.ofInstant(accessTokenExpiration.toInstant(), ZoneOffset.UTC)
         );
     }
 

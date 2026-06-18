@@ -33,6 +33,7 @@ class AuthControllerTest extends RestControllerTestSupport {
         LoginRequest request = new LoginRequest("login-user", "password1234");
         LoginServiceResponse response = LoginServiceResponse.of(
                 "test-access-token",
+                "test-refresh-token",
                 OffsetDateTime.parse("2026-06-18T00:00:00Z")
         );
 
@@ -46,6 +47,7 @@ class AuthControllerTest extends RestControllerTestSupport {
                 .andExpect(jsonPath("$.code").value("LOGIN_SUCCESS"))
                 .andExpect(jsonPath("$.message").value("로그인에 성공했습니다."))
                 .andExpect(jsonPath("$.data.accessToken").value("test-access-token"))
+                .andExpect(jsonPath("$.data.refreshToken").value("test-refresh-token"))
                 .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.data.expiresAt").value("2026-06-18T00:00Z"));
     }

@@ -33,16 +33,20 @@ class AuthServiceTest extends TransactionalIntegrationTestSupport {
     void login() {
         // given
         String encodedPassword = passwordEncoder.encode("password1234");
-        userRepository.save(User.createUser("login-user", encodedPassword));
+        User savedUser = userRepository.save(User.createUser("login-user", encodedPassword));
         LoginServiceRequest request = new LoginServiceRequest("login-user", "password1234");
 
         // when
         LoginServiceResponse response = authService.login(request);
 
         // then
+        User loginUser = userRepository.findById(savedUser.getId()).orElseThrow();
+
         assertThat(response.accessToken()).isNotBlank();
+        assertThat(response.refreshToken()).isNotBlank();
         assertThat(response.tokenType()).isEqualTo("Bearer");
         assertThat(response.expiresAt()).isNotBlank();
+        assertThat(loginUser.getRefreshToken()).isEqualTo(response.refreshToken());
         assertThatCode(() -> OffsetDateTime.parse(response.expiresAt())).doesNotThrowAnyException();
     }
 

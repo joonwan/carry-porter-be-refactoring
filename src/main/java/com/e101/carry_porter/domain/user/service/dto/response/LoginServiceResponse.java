@@ -4,11 +4,12 @@ import java.time.OffsetDateTime;
 
 public record LoginServiceResponse(
         String accessToken,
+        String refreshToken,
         String tokenType,
         String expiresAt
 ) {
 
-    public static LoginServiceResponse of(String accessToken, OffsetDateTime expiresAt) {
-        return new LoginServiceResponse(accessToken, "Bearer", expiresAt.toString());
+    public static LoginServiceResponse of(String accessToken, String refreshToken, OffsetDateTime expiresAt) {
+        return new LoginServiceResponse(accessToken, refreshToken, "Bearer", expiresAt.toString());
     }
 }

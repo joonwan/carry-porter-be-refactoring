@@ -22,6 +22,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
 
+    @Transactional
     public LoginServiceResponse login(LoginServiceRequest request) {
         User user = userRepository.findByUsername(request.username())
                 .orElseThrow(() -> new UserException(UserErrorCode.LOGIN_FAILED));
@@ -29,8 +30,9 @@ public class AuthService {
         validatePassword(request.password(), user.getPassword());
 
         JwtToken jwtToken = jwtTokenProvider.createAccessToken(user.getId(), user.getUsername());
+        user.updateRefreshToken(jwtToken.refreshToken());
 
-        return LoginServiceResponse.of(jwtToken.accessToken(), jwtToken.expiresAt());
+        return LoginServiceResponse.of(jwtToken.accessToken(), jwtToken.refreshToken(), jwtToken.expiresAt());
     }
 
     private void validatePassword(String rawPassword, String encodedPassword) {

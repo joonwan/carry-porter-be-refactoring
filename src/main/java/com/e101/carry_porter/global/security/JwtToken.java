@@ -4,6 +4,7 @@ import java.time.OffsetDateTime;
 
 public record JwtToken(
         String accessToken,
+        String refreshToken,
         OffsetDateTime expiresAt
 ) {
 }

@@ -108,7 +108,9 @@ function App() {
     });
 
     const accessToken = body.data.accessToken;
+    const refreshToken = body.data.refreshToken;
     localStorage.setItem("accessToken", accessToken);
+    localStorage.setItem("refreshToken", refreshToken);
     localStorage.setItem("expiresAt", body.data.expiresAt);
     localStorage.setItem("username", form.username);
 
@@ -152,6 +154,7 @@ function App() {
   function logout() {
     abortControllerRef.current?.abort();
     localStorage.removeItem("accessToken");
+    localStorage.removeItem("refreshToken");
     localStorage.removeItem("expiresAt");
     localStorage.removeItem("username");
     localStorage.removeItem("missionId");
