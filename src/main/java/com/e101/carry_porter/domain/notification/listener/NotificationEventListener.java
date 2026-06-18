@@ -28,8 +28,7 @@ public class NotificationEventListener {
         log.info("RobotAssignedEvent 수신: missionId = {}, userId = {}",
                 event.missionId(), event.userId());
 
-        notificationService.send(
-                event.userId(),
+        notificationService.createNotification(
                 NotificationPayload.of(
                         "ROBOT_ASSIGNED",
                         event.missionId(),
@@ -45,8 +44,7 @@ public class NotificationEventListener {
         log.info("MissionStartedEvent 수신: missionId = {}, userId = {}",
                 event.missionId(), event.userId());
 
-        notificationService.send(
-                event.userId(),
+        notificationService.createNotification(
                 NotificationPayload.of(
                         "MISSION_STARTED",
                         event.missionId(),
@@ -62,8 +60,7 @@ public class NotificationEventListener {
         log.info("MissionArrivedEvent 수신: missionId = {}, userId = {}",
                 event.missionId(), event.userId());
 
-        notificationService.send(
-                event.userId(),
+        notificationService.createNotification(
                 NotificationPayload.of(
                         "MISSION_ARRIVED",
                         event.missionId(),
@@ -79,8 +76,7 @@ public class NotificationEventListener {
         log.info("MissionReturnStartedEvent 수신: missionId = {}, userId = {}",
                 event.missionId(), event.userId());
 
-        notificationService.send(
-                event.userId(),
+        notificationService.createNotification(
                 NotificationPayload.of(
                         "MISSION_RETURN_STARTED",
                         event.missionId(),
@@ -96,8 +92,7 @@ public class NotificationEventListener {
         log.info("MissionFinishedEvent 수신: missionId = {}, userId = {}",
                 event.missionId(), event.userId());
 
-        notificationService.send(
-                event.userId(),
+        notificationService.createNotification(
                 NotificationPayload.of(
                         "MISSION_FINISHED",
                         event.missionId(),
@@ -113,8 +108,7 @@ public class NotificationEventListener {
         log.info("MissionFailedEvent 수신: missionId = {}, userId = {}, failureCode = {}",
                 event.missionId(), event.userId(), event.failureCode());
 
-        notificationService.send(
-                event.userId(),
+        notificationService.createNotification(
                 NotificationPayload.failure(
                         event.missionId(),
                         event.userId(),

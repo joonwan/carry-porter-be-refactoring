@@ -37,7 +37,7 @@ class NotificationControllerTest extends RestControllerTestSupport {
         );
         SseEmitter emitter = new SseEmitter();
 
-        given(notificationService.createConnection(eq(1L))).willReturn(emitter);
+        given(notificationService.createConnection(eq(1L), eq(null))).willReturn(emitter);
 
         // when & then
         mockMvc.perform(get("/api/notifications/subscribe")
@@ -45,6 +45,30 @@ class NotificationControllerTest extends RestControllerTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(request().asyncStarted());
 
-        then(notificationService).should().createConnection(1L);
+        then(notificationService).should().createConnection(1L, null);
+    }
+
+    @Test
+    @DisplayName("Last-Event-ID 헤더가 있으면 구독 시 함께 전달한다")
+    void subscribeWithLastEventId() throws Exception {
+        // given
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser(1L, "notification-user");
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                authenticatedUser,
+                null,
+                List.of()
+        );
+        SseEmitter emitter = new SseEmitter();
+
+        given(notificationService.createConnection(eq(1L), eq("15"))).willReturn(emitter);
+
+        // when & then
+        mockMvc.perform(get("/api/notifications/subscribe")
+                        .header("Last-Event-ID", "15")
+                        .with(authentication(authenticationToken)))
+                .andExpect(status().isOk())
+                .andExpect(request().asyncStarted());
+
+        then(notificationService).should().createConnection(1L, "15");
     }
 }

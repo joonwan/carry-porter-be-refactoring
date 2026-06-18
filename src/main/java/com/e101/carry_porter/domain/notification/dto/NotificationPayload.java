@@ -1,5 +1,7 @@
 package com.e101.carry_porter.domain.notification.dto;
 
+import com.e101.carry_porter.domain.notification.entity.Notification;
+
 public record NotificationPayload(
         String eventType,
         Long missionId,
@@ -19,5 +21,15 @@ public record NotificationPayload(
             String failureCode
     ) {
         return new NotificationPayload("MISSION_FAILED", missionId, userId, message, failureCode);
+    }
+
+    public static NotificationPayload from(Notification notification) {
+        return new NotificationPayload(
+                notification.getEventType(),
+                notification.getMissionId(),
+                notification.getUserId(),
+                notification.getMessage(),
+                notification.getFailureCode()
+        );
     }
 }

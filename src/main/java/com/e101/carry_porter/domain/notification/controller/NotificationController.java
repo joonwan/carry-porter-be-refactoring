@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -21,10 +22,11 @@ public class NotificationController {
 
     @GetMapping(path = "/subscribe", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter subscribe(
-            @AuthenticationPrincipal AuthenticatedUser authenticatedUser
+            @AuthenticationPrincipal AuthenticatedUser authenticatedUser,
+            @RequestHeader(value = "Last-Event-ID", required = false) String lastEventId
     ) {
-        log.info("SSE 구독 요청: userId = {}, username = {}",
-                authenticatedUser.userId(), authenticatedUser.username());
-        return notificationService.createConnection(authenticatedUser.userId());
+        log.info("SSE 구독 요청: userId = {}, username = {}, lastEventId = {}",
+                authenticatedUser.userId(), authenticatedUser.username(), lastEventId);
+        return notificationService.createConnection(authenticatedUser.userId(), lastEventId);
     }
 }

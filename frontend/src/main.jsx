@@ -38,6 +38,7 @@ function App() {
   const [expiresAt, setExpiresAt] = useState(() => localStorage.getItem("expiresAt") || "");
   const [username, setUsername] = useState(() => localStorage.getItem("username") || "");
   const [missionId, setMissionId] = useState(() => localStorage.getItem("missionId") || "");
+  const [lastEventId, setLastEventId] = useState(() => localStorage.getItem("lastNotificationEventId") || "");
   const [missionStatus, setMissionStatus] = useState("READY");
   const [events, setEvents] = useState([]);
   const [sseStatus, setSseStatus] = useState("DISCONNECTED");
@@ -154,10 +155,12 @@ function App() {
     localStorage.removeItem("expiresAt");
     localStorage.removeItem("username");
     localStorage.removeItem("missionId");
+    localStorage.removeItem("lastNotificationEventId");
     setToken("");
     setExpiresAt("");
     setUsername("");
     setMissionId("");
+    setLastEventId("");
     setMissionStatus("READY");
     setEvents([]);
     setSseStatus("DISCONNECTED");
@@ -175,6 +178,7 @@ function App() {
         headers: {
           Accept: "text/event-stream",
           Authorization: `Bearer ${accessToken}`,
+          ...(lastEventId ? { "Last-Event-ID": lastEventId } : {}),
         },
         signal: controller.signal,
       });
@@ -218,6 +222,7 @@ function App() {
 
   function handleSseChunk(chunk) {
     const lines = chunk.split("\n");
+    const eventId = lines.find((line) => line.startsWith("id:"))?.replace("id:", "").trim();
     const eventName = lines.find((line) => line.startsWith("event:"))?.replace("event:", "").trim();
     const data = lines
       .filter((line) => line.startsWith("data:"))
@@ -230,6 +235,12 @@ function App() {
 
     try {
       const payload = JSON.parse(data);
+
+      if (eventId) {
+        localStorage.setItem("lastNotificationEventId", eventId);
+        setLastEventId(eventId);
+      }
+
       appendEvent(payload);
 
       if (payload.eventType) {

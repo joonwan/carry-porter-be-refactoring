@@ -4,20 +4,30 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
 import com.e101.carry_porter.domain.notification.dto.NotificationPayload;
+import com.e101.carry_porter.domain.notification.entity.Notification;
+import com.e101.carry_porter.domain.notification.event.NotificationCreatedEvent;
 import com.e101.carry_porter.domain.notification.repository.NotificationEmitterRepository;
-import com.e101.carry_porter.support.IntegrationTestSupport;
+import com.e101.carry_porter.domain.notification.repository.NotificationRepository;
+import com.e101.carry_porter.support.TransactionalIntegrationTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.event.ApplicationEvents;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-class NotificationServiceTest extends IntegrationTestSupport {
+class NotificationServiceTest extends TransactionalIntegrationTestSupport {
 
     @Autowired
     private NotificationService notificationService;
 
     @Autowired
     private NotificationEmitterRepository notificationEmitterRepository;
+
+    @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
+    private ApplicationEvents events;
 
     @Test
     @DisplayName("스프링 빈 환경에서도 SSE 구독 요청이 오면 emitter를 생성하여 저장소에 저장한다")
@@ -26,7 +36,7 @@ class NotificationServiceTest extends IntegrationTestSupport {
         Long userId = 1L;
 
         // when
-        SseEmitter emitter = notificationService.createConnection(userId);
+        SseEmitter emitter = notificationService.createConnection(userId, null);
 
         // then
         assertThat(emitter).isNotNull();
@@ -38,10 +48,10 @@ class NotificationServiceTest extends IntegrationTestSupport {
     void createConnectionWithExistingEmitter() {
         // given
         Long userId = 1L;
-        SseEmitter firstEmitter = notificationService.createConnection(userId);
+        SseEmitter firstEmitter = notificationService.createConnection(userId, null);
 
         // when
-        SseEmitter secondEmitter = notificationService.createConnection(userId);
+        SseEmitter secondEmitter = notificationService.createConnection(userId, null);
 
         // then
         assertThat(secondEmitter).isNotNull();
@@ -50,8 +60,8 @@ class NotificationServiceTest extends IntegrationTestSupport {
     }
 
     @Test
-    @DisplayName("활성화된 SSE 연결이 없어도 알림 전송 시 예외 없이 종료된다")
-    void sendWithoutEmitter() {
+    @DisplayName("알림을 생성하면 DB에 저장하고 NotificationCreatedEvent를 발행한다")
+    void createNotification() {
         // given
         Long userId = 1L;
         NotificationPayload payload = NotificationPayload.of(
@@ -62,8 +72,68 @@ class NotificationServiceTest extends IntegrationTestSupport {
         );
 
         // when
+        notificationService.createNotification(payload);
+
+        // then
+        assertThat(notificationRepository.findAll()).hasSize(1);
+
+        Notification notification = notificationRepository.findAll().getFirst();
+        assertThat(notification.getUserId()).isEqualTo(userId);
+        assertThat(notification.getMissionId()).isEqualTo(10L);
+        assertThat(notification.getEventType()).isEqualTo("MISSION_STARTED");
+        assertThat(notification.getMessage()).isEqualTo("로봇이 출발했습니다.");
+        assertThat(events.stream(NotificationCreatedEvent.class)).hasSize(1);
+        assertThat(events.stream(NotificationCreatedEvent.class).findFirst()).isPresent()
+                .get()
+                .extracting(NotificationCreatedEvent::notificationId, NotificationCreatedEvent::userId)
+                .containsExactly(notification.getId(), userId);
+    }
+
+    @Test
+    @DisplayName("활성화된 SSE 연결이 없어도 dispatch 호출 시 예외 없이 종료된다")
+    void dispatchWithoutEmitter() {
+        // given
+        Notification notification = notificationRepository.save(
+                Notification.create(NotificationPayload.of(
+                        "MISSION_STARTED",
+                        10L,
+                        1L,
+                        "로봇이 출발했습니다."
+                ))
+        );
+
         // when & then
-        assertThatCode(() -> notificationService.send(userId, payload))
+        assertThatCode(() -> notificationService.dispatch(notification.getId()))
                 .doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("Last-Event-ID가 있으면 해당 id 이후의 밀린 알림을 재전송할 수 있도록 새 emitter를 연결한다")
+    void createConnectionWithLastEventId() {
+        // given
+        Long userId = 1L;
+        Notification firstNotification = notificationRepository.save(
+                Notification.create(NotificationPayload.of(
+                        "ROBOT_ASSIGNED",
+                        11L,
+                        userId,
+                        "로봇 배정이 완료되었습니다."
+                ))
+        );
+        notificationRepository.save(
+                Notification.create(NotificationPayload.of(
+                        "MISSION_STARTED",
+                        11L,
+                        userId,
+                        "로봇이 출발했습니다."
+                ))
+        );
+
+        // when
+        SseEmitter emitter = notificationService.createConnection(userId, String.valueOf(firstNotification.getId()));
+
+        // then
+        assertThat(emitter).isNotNull();
+        assertThat(notificationEmitterRepository.findByUserId(userId)).contains(emitter);
     }
 }

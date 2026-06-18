@@ -1,6 +1,5 @@
 package com.e101.carry_porter.domain.notification.listener;
 
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -40,7 +39,7 @@ class NotificationEventListenerTest {
 
         // then
         ArgumentCaptor<NotificationPayload> payloadCaptor = ArgumentCaptor.forClass(NotificationPayload.class);
-        verify(notificationService, times(1)).send(eq(3L), payloadCaptor.capture());
+        verify(notificationService, times(1)).createNotification(payloadCaptor.capture());
         verifyNotificationPayload(payloadCaptor.getValue(), "ROBOT_ASSIGNED", 1L, 3L, "로봇 배정이 완료되었습니다.", null);
     }
 
@@ -55,7 +54,7 @@ class NotificationEventListenerTest {
 
         // then
         ArgumentCaptor<NotificationPayload> payloadCaptor = ArgumentCaptor.forClass(NotificationPayload.class);
-        verify(notificationService, times(1)).send(eq(3L), payloadCaptor.capture());
+        verify(notificationService, times(1)).createNotification(payloadCaptor.capture());
         verifyNotificationPayload(payloadCaptor.getValue(), "MISSION_STARTED", 1L, 3L, "로봇이 출발했습니다.", null);
     }
 
@@ -70,7 +69,7 @@ class NotificationEventListenerTest {
 
         // then
         ArgumentCaptor<NotificationPayload> payloadCaptor = ArgumentCaptor.forClass(NotificationPayload.class);
-        verify(notificationService, times(1)).send(eq(3L), payloadCaptor.capture());
+        verify(notificationService, times(1)).createNotification(payloadCaptor.capture());
         verifyNotificationPayload(payloadCaptor.getValue(), "MISSION_ARRIVED", 1L, 3L, "로봇이 목적지에 도착했습니다.", null);
     }
 
@@ -85,7 +84,7 @@ class NotificationEventListenerTest {
 
         // then
         ArgumentCaptor<NotificationPayload> payloadCaptor = ArgumentCaptor.forClass(NotificationPayload.class);
-        verify(notificationService, times(1)).send(eq(3L), payloadCaptor.capture());
+        verify(notificationService, times(1)).createNotification(payloadCaptor.capture());
         verifyNotificationPayload(payloadCaptor.getValue(), "MISSION_RETURN_STARTED", 1L, 3L, "로봇이 복귀를 시작했습니다.", null);
     }
 
@@ -100,7 +99,7 @@ class NotificationEventListenerTest {
 
         // then
         ArgumentCaptor<NotificationPayload> payloadCaptor = ArgumentCaptor.forClass(NotificationPayload.class);
-        verify(notificationService, times(1)).send(eq(3L), payloadCaptor.capture());
+        verify(notificationService, times(1)).createNotification(payloadCaptor.capture());
         verifyNotificationPayload(payloadCaptor.getValue(), "MISSION_FINISHED", 1L, 3L, "미션이 완료되었습니다.", null);
     }
 
@@ -121,7 +120,7 @@ class NotificationEventListenerTest {
 
         // then
         ArgumentCaptor<NotificationPayload> payloadCaptor = ArgumentCaptor.forClass(NotificationPayload.class);
-        verify(notificationService, times(1)).send(eq(3L), payloadCaptor.capture());
+        verify(notificationService, times(1)).createNotification(payloadCaptor.capture());
         verifyNotificationPayload(payloadCaptor.getValue(), "MISSION_FAILED", 1L, 3L, "미션 수행 중 오류가 발생했습니다.", "ROBOT_EMERGENCY");
     }
 
