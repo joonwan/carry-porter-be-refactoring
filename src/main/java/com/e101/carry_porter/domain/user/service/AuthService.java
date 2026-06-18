@@ -35,6 +35,14 @@ public class AuthService {
         return LoginServiceResponse.of(jwtToken.accessToken(), jwtToken.refreshToken(), jwtToken.expiresAt());
     }
 
+    @Transactional
+    public void logout(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+
+        user.clearRefreshToken();
+    }
+
     private void validatePassword(String rawPassword, String encodedPassword) {
         if (!passwordEncoder.matches(rawPassword, encodedPassword)) {
             throw new UserException(UserErrorCode.LOGIN_FAILED);

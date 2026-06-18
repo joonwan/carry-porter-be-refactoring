@@ -77,4 +77,30 @@ class AuthServiceTest extends TransactionalIntegrationTestSupport {
                 .extracting(exception -> ((UserException) exception).getErrorCode())
                 .isEqualTo(UserErrorCode.LOGIN_FAILED);
     }
+
+    @Test
+    @DisplayName("로그아웃하면 사용자의 refresh token 을 삭제한다")
+    void logout() {
+        // given
+        String encodedPassword = passwordEncoder.encode("password1234");
+        User user = userRepository.save(User.createUser("logout-user", encodedPassword));
+        authService.login(new LoginServiceRequest("logout-user", "password1234"));
+
+        // when
+        authService.logout(user.getId());
+
+        // then
+        User logoutUser = userRepository.findById(user.getId()).orElseThrow();
+        assertThat(logoutUser.getRefreshToken()).isNull();
+    }
+
+    @Test
+    @DisplayName("존재하지 않는 사용자로 로그아웃하면 UserException을 던진다")
+    void logoutWithInvalidUser() {
+        // when & then
+        assertThatThrownBy(() -> authService.logout(9999L))
+                .isInstanceOf(UserException.class)
+                .extracting(exception -> ((UserException) exception).getErrorCode())
+                .isEqualTo(UserErrorCode.USER_NOT_FOUND);
+    }
 }

@@ -151,23 +151,34 @@ function App() {
     });
   }
 
-  function logout() {
-    abortControllerRef.current?.abort();
-    localStorage.removeItem("accessToken");
-    localStorage.removeItem("refreshToken");
-    localStorage.removeItem("expiresAt");
-    localStorage.removeItem("username");
-    localStorage.removeItem("missionId");
-    localStorage.removeItem("lastNotificationEventId");
-    setToken("");
-    setExpiresAt("");
-    setUsername("");
-    setMissionId("");
-    setLastEventId("");
-    setMissionStatus("READY");
-    setEvents([]);
-    setSseStatus("DISCONNECTED");
-    setView("login");
+  async function logout() {
+    try {
+      if (token) {
+        await request("/api/auth/logout", {
+          method: "POST",
+          body: JSON.stringify({}),
+        });
+      }
+    } catch {
+      // 서버 로그아웃 요청이 실패해도 현재 브라우저의 인증 정보는 정리한다.
+    } finally {
+      abortControllerRef.current?.abort();
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("expiresAt");
+      localStorage.removeItem("username");
+      localStorage.removeItem("missionId");
+      localStorage.removeItem("lastNotificationEventId");
+      setToken("");
+      setExpiresAt("");
+      setUsername("");
+      setMissionId("");
+      setLastEventId("");
+      setMissionStatus("READY");
+      setEvents([]);
+      setSseStatus("DISCONNECTED");
+      setView("login");
+    }
   }
 
   async function connectSse(accessToken) {

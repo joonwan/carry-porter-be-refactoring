@@ -51,6 +51,10 @@ public class User extends BaseEntity {
         this.refreshToken = refreshToken;
     }
 
+    public void clearRefreshToken() {
+        this.refreshToken = null;
+    }
+
     @Builder
     private User(String username, String password, String refreshToken) {
         this.username = username;

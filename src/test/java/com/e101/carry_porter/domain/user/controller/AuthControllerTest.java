@@ -3,8 +3,10 @@ package com.e101.carry_porter.domain.user.controller;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -13,11 +15,14 @@ import com.e101.carry_porter.domain.user.exception.UserErrorCode;
 import com.e101.carry_porter.domain.user.exception.UserException;
 import com.e101.carry_porter.domain.user.service.AuthService;
 import com.e101.carry_porter.domain.user.service.dto.response.LoginServiceResponse;
+import com.e101.carry_porter.global.security.AuthenticatedUser;
 import com.e101.carry_porter.support.RestControllerTestSupport;
 import java.time.OffsetDateTime;
+import java.util.List;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @WebMvcTest(AuthController.class)
@@ -101,5 +106,27 @@ class AuthControllerTest extends RestControllerTestSupport {
                 .andExpect(jsonPath("$.code").value("GLOBAL_400"))
                 .andExpect(jsonPath("$.message").value("password는 8자 이상 255자 이하여야 합니다."))
                 .andExpect(jsonPath("$.data").value(nullValue()));
+    }
+
+    @Test
+    @DisplayName("인증된 사용자가 로그아웃 요청을 하면 200 응답을 반환한다")
+    void logout() throws Exception {
+        // given
+        AuthenticatedUser authenticatedUser = new AuthenticatedUser(1L, "logout-user");
+        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                authenticatedUser,
+                null,
+                List.of()
+        );
+
+        // when & then
+        mockMvc.perform(post("/api/auth/logout")
+                        .with(authentication(authenticationToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("LOGOUT_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("로그아웃에 성공했습니다."))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+
+        then(authService).should().logout(1L);
     }
 }
