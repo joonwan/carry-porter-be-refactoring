@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.Date;
+import java.util.UUID;
 import javax.crypto.SecretKey;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -25,8 +26,9 @@ public class JwtTokenProvider {
         Date refreshTokenExpiration = new Date(now.getTime() + jwtProperties.getRefreshTokenExpiration());
 
         String accessToken = Jwts.builder()
-                .subject(String.valueOf(userId))        // token 소유 주체
-                .claim("username", username)     // payload
+                .subject(String.valueOf(userId))         // token 소유 주체
+                .claim("username", username)      // payload
+                .id(UUID.randomUUID().toString())       // jti 설정
                 .issuedAt(now)
                 .expiration(accessTokenExpiration)
                 .signWith(getSigningKey())
@@ -35,6 +37,7 @@ public class JwtTokenProvider {
         String refreshToken = Jwts.builder()
                 .subject(String.valueOf(userId))
                 .claim("username", username)
+                .id(UUID.randomUUID().toString())
                 .issuedAt(now)
                 .expiration(refreshTokenExpiration)
                 .signWith(getSigningKey())

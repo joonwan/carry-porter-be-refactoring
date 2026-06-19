@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.e101.carry_porter.domain.user.controller.dto.request.LoginRequest;
+import com.e101.carry_porter.domain.user.controller.dto.request.RefreshTokenRequest;
 import com.e101.carry_porter.domain.user.exception.UserErrorCode;
 import com.e101.carry_porter.domain.user.exception.UserException;
 import com.e101.carry_porter.domain.user.service.AuthService;
@@ -128,5 +129,66 @@ class AuthControllerTest extends RestControllerTestSupport {
                 .andExpect(jsonPath("$.data").value(nullValue()));
 
         then(authService).should().logout(1L);
+    }
+
+    @Test
+    @DisplayName("refresh token 요청이 유효하면 200 응답과 새 토큰을 반환한다")
+    void refresh() throws Exception {
+        // given
+        RefreshTokenRequest request = new RefreshTokenRequest("valid-refresh-token");
+        LoginServiceResponse response = LoginServiceResponse.of(
+                "new-access-token",
+                "new-refresh-token",
+                OffsetDateTime.parse("2026-06-19T00:00:00Z")
+        );
+
+        given(authService.refresh(any())).willReturn(response);
+
+        // when & then
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value("TOKEN_REFRESH_SUCCESS"))
+                .andExpect(jsonPath("$.message").value("토큰 재발급에 성공했습니다."))
+                .andExpect(jsonPath("$.data.accessToken").value("new-access-token"))
+                .andExpect(jsonPath("$.data.refreshToken").value("new-refresh-token"))
+                .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
+                .andExpect(jsonPath("$.data.expiresAt").value("2026-06-19T00:00Z"));
+    }
+
+    @Test
+    @DisplayName("유효하지 않은 refresh token 으로 요청하면 401 응답을 반환한다")
+    void refreshWithInvalidToken() throws Exception {
+        // given
+        RefreshTokenRequest request = new RefreshTokenRequest("invalid-refresh-token");
+
+        given(authService.refresh(any()))
+                .willThrow(new UserException(UserErrorCode.INVALID_REFRESH_TOKEN));
+
+        // when & then
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("USER_401"))
+                .andExpect(jsonPath("$.message").value("유효하지 않은 refresh token 입니다."))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+    }
+
+    @Test
+    @DisplayName("refresh token 이 비어 있으면 400 응답을 반환한다")
+    void refreshWithBlankToken() throws Exception {
+        // given
+        RefreshTokenRequest request = new RefreshTokenRequest("");
+
+        // when & then
+        mockMvc.perform(post("/api/auth/refresh")
+                        .contentType(APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("GLOBAL_400"))
+                .andExpect(jsonPath("$.message").value("refreshToken은 비어 있을 수 없습니다."))
+                .andExpect(jsonPath("$.data").value(nullValue()));
     }
 }

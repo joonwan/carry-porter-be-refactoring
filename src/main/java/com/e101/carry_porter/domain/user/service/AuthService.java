@@ -5,7 +5,9 @@ import com.e101.carry_porter.domain.user.exception.UserErrorCode;
 import com.e101.carry_porter.domain.user.exception.UserException;
 import com.e101.carry_porter.domain.user.repository.UserRepository;
 import com.e101.carry_porter.domain.user.service.dto.request.LoginServiceRequest;
+import com.e101.carry_porter.domain.user.service.dto.request.RefreshTokenServiceRequest;
 import com.e101.carry_porter.domain.user.service.dto.response.LoginServiceResponse;
+import com.e101.carry_porter.global.security.AuthenticatedUser;
 import com.e101.carry_porter.global.security.JwtToken;
 import com.e101.carry_porter.global.security.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +38,22 @@ public class AuthService {
     }
 
     @Transactional
+    public LoginServiceResponse refresh(RefreshTokenServiceRequest request) {
+        validateRefreshToken(request.refreshToken());
+
+        AuthenticatedUser authenticatedUser = jwtTokenProvider.getAuthenticatedUser(request.refreshToken());
+        User user = userRepository.findById(authenticatedUser.userId())
+                .orElseThrow(() -> new UserException(UserErrorCode.INVALID_REFRESH_TOKEN));
+
+        validateStoredRefreshToken(user, request.refreshToken());
+
+        JwtToken jwtToken = jwtTokenProvider.createAccessToken(user.getId(), user.getUsername());
+        user.updateRefreshToken(jwtToken.refreshToken());
+
+        return LoginServiceResponse.of(jwtToken.accessToken(), jwtToken.refreshToken(), jwtToken.expiresAt());
+    }
+
+    @Transactional
     public void logout(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
@@ -46,6 +64,18 @@ public class AuthService {
     private void validatePassword(String rawPassword, String encodedPassword) {
         if (!passwordEncoder.matches(rawPassword, encodedPassword)) {
             throw new UserException(UserErrorCode.LOGIN_FAILED);
+        }
+    }
+
+    private void validateRefreshToken(String refreshToken) {
+        if (!jwtTokenProvider.validateToken(refreshToken)) {
+            throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
+        }
+    }
+
+    private void validateStoredRefreshToken(User user, String refreshToken) {
+        if (user.getRefreshToken() == null || !user.getRefreshToken().equals(refreshToken)) {
+            throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
         }
     }
 }

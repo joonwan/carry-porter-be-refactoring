@@ -1,6 +1,7 @@
 package com.e101.carry_porter.domain.user.controller;
 
 import com.e101.carry_porter.domain.user.controller.dto.request.LoginRequest;
+import com.e101.carry_porter.domain.user.controller.dto.request.RefreshTokenRequest;
 import com.e101.carry_porter.domain.user.service.AuthService;
 import com.e101.carry_porter.domain.user.service.dto.response.LoginServiceResponse;
 import com.e101.carry_porter.global.security.AuthenticatedUser;
@@ -29,6 +30,17 @@ public class AuthController {
 
         return ResponseEntity.ok(
                 ApiResponse.success("LOGIN_SUCCESS", "로그인에 성공했습니다.", response)
+        );
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<LoginServiceResponse>> refresh(
+            @Valid @RequestBody RefreshTokenRequest request
+    ) {
+        LoginServiceResponse response = authService.refresh(request.toServiceRequest());
+
+        return ResponseEntity.ok(
+                ApiResponse.success("TOKEN_REFRESH_SUCCESS", "토큰 재발급에 성공했습니다.", response)
         );
     }
 

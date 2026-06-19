@@ -9,6 +9,7 @@ import com.e101.carry_porter.domain.user.exception.UserErrorCode;
 import com.e101.carry_porter.domain.user.exception.UserException;
 import com.e101.carry_porter.domain.user.repository.UserRepository;
 import com.e101.carry_porter.domain.user.service.dto.request.LoginServiceRequest;
+import com.e101.carry_porter.domain.user.service.dto.request.RefreshTokenServiceRequest;
 import com.e101.carry_porter.domain.user.service.dto.response.LoginServiceResponse;
 import com.e101.carry_porter.support.TransactionalIntegrationTestSupport;
 import java.time.OffsetDateTime;
@@ -102,5 +103,57 @@ class AuthServiceTest extends TransactionalIntegrationTestSupport {
                 .isInstanceOf(UserException.class)
                 .extracting(exception -> ((UserException) exception).getErrorCode())
                 .isEqualTo(UserErrorCode.USER_NOT_FOUND);
+    }
+
+    @Test
+    @DisplayName("유효한 refresh token 으로 요청하면 새 access token 과 새 refresh token 을 발급하고 DB 값을 갱신한다")
+    void refresh() {
+        // given
+        String encodedPassword = passwordEncoder.encode("password1234");
+        User savedUser = userRepository.save(User.createUser("refresh-user", encodedPassword));
+        LoginServiceResponse loginResponse = authService.login(new LoginServiceRequest("refresh-user", "password1234"));
+        RefreshTokenServiceRequest request = new RefreshTokenServiceRequest(loginResponse.refreshToken());
+
+        // when
+        LoginServiceResponse refreshResponse = authService.refresh(request);
+
+        // then
+        User refreshedUser = userRepository.findById(savedUser.getId()).orElseThrow();
+
+        assertThat(refreshResponse.accessToken()).isNotBlank();
+        assertThat(refreshResponse.refreshToken()).isNotBlank();
+        assertThat(refreshResponse.refreshToken()).isNotEqualTo(loginResponse.refreshToken());
+        assertThat(refreshedUser.getRefreshToken()).isEqualTo(refreshResponse.refreshToken());
+        assertThat(refreshResponse.tokenType()).isEqualTo("Bearer");
+        assertThatCode(() -> OffsetDateTime.parse(refreshResponse.expiresAt())).doesNotThrowAnyException();
+    }
+
+    @Test
+    @DisplayName("유효하지 않은 refresh token 으로 요청하면 UserException을 던진다")
+    void refreshWithInvalidToken() {
+        // given
+        RefreshTokenServiceRequest request = new RefreshTokenServiceRequest("invalid-refresh-token");
+
+        // when & then
+        assertThatThrownBy(() -> authService.refresh(request))
+                .isInstanceOf(UserException.class)
+                .extracting(exception -> ((UserException) exception).getErrorCode())
+                .isEqualTo(UserErrorCode.INVALID_REFRESH_TOKEN);
+    }
+
+    @Test
+    @DisplayName("저장된 refresh token 과 다르면 UserException을 던진다")
+    void refreshWithMismatchedStoredToken() {
+        // given
+        String encodedPassword = passwordEncoder.encode("password1234");
+        userRepository.save(User.createUser("refresh-user-2", encodedPassword));
+        LoginServiceResponse firstLoginResponse = authService.login(new LoginServiceRequest("refresh-user-2", "password1234"));
+        authService.login(new LoginServiceRequest("refresh-user-2", "password1234"));
+
+        // when & then
+        assertThatThrownBy(() -> authService.refresh(new RefreshTokenServiceRequest(firstLoginResponse.refreshToken())))
+                .isInstanceOf(UserException.class)
+                .extracting(exception -> ((UserException) exception).getErrorCode())
+                .isEqualTo(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
 }
