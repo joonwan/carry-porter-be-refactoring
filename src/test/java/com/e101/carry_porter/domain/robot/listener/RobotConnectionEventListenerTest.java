@@ -26,25 +26,31 @@ class RobotConnectionEventListenerTest {
     @DisplayName("RobotConnectedMessageReceivedEvent를 수신하면 robotService.registerOrReconnect()를 한 번 호출한다")
     void handleRobotConnectedMessageReceivedEvent() {
         // given
-        RobotConnectedMessageReceivedEvent event = new RobotConnectedMessageReceivedEvent("AA:BB:CC:DD:EE:10");
+        RobotConnectedMessageReceivedEvent event = new RobotConnectedMessageReceivedEvent(
+                "robot-event-1",
+                "AA:BB:CC:DD:EE:10"
+        );
 
         // when
         robotConnectionEventListener.handleRobotConnectedMessageReceivedEvent(event);
 
         // then
-        verify(robotService, times(1)).registerOrReconnect("AA:BB:CC:DD:EE:10");
+        verify(robotService, times(1)).registerOrReconnect("robot-event-1", "AA:BB:CC:DD:EE:10");
     }
 
     @Test
     @DisplayName("RobotDisconnectedMessageReceivedEvent를 수신하면 robotService.disconnect()를 한 번 호출한다")
     void handleRobotDisconnectedMessageReceivedEvent() {
         // given
-        RobotDisconnectedMessageReceivedEvent event = new RobotDisconnectedMessageReceivedEvent("AA:BB:CC:DD:EE:10");
+        RobotDisconnectedMessageReceivedEvent event = new RobotDisconnectedMessageReceivedEvent(
+                "robot-event-2",
+                "AA:BB:CC:DD:EE:10"
+        );
 
         // when
         robotConnectionEventListener.handleRobotDisconnectedMessageReceivedEvent(event);
 
         // then
-        verify(robotService, times(1)).disconnect("AA:BB:CC:DD:EE:10");
+        verify(robotService, times(1)).disconnect("robot-event-2", "AA:BB:CC:DD:EE:10");
     }
 }

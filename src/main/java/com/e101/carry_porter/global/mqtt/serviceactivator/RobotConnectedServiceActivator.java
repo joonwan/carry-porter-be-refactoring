@@ -23,10 +23,11 @@ public class RobotConnectedServiceActivator {
         RobotInboundMessage inboundMessage = message.getPayload();
 
         eventPublisher.publishEvent(new RobotConnectedMessageReceivedEvent(
+                inboundMessage.payload().robotEventId(),
                 inboundMessage.macAddress()
         ));
 
-        log.info("RobotConnectedMessageReceivedEvent 발행: robotMacAddress = {}",
-                inboundMessage.macAddress());
+        log.info("RobotConnectedMessageReceivedEvent 발행: robotEventId = {}, robotMacAddress = {}",
+                inboundMessage.payload().robotEventId(), inboundMessage.macAddress());
     }
 }

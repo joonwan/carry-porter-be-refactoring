@@ -19,14 +19,16 @@ public class RobotConnectionEventListener {
     @Async("eventTaskExecutor")
     @EventListener
     public void handleRobotConnectedMessageReceivedEvent(RobotConnectedMessageReceivedEvent event) {
-        log.info("RobotConnectedMessageReceivedEvent 수신: robotMacAddress = {}", event.macAddress());
-        robotService.registerOrReconnect(event.macAddress());
+        log.info("RobotConnectedMessageReceivedEvent 수신: robotEventId = {}, robotMacAddress = {}",
+                event.robotEventId(), event.macAddress());
+        robotService.registerOrReconnect(event.robotEventId(), event.macAddress());
     }
 
     @Async("eventTaskExecutor")
     @EventListener
     public void handleRobotDisconnectedMessageReceivedEvent(RobotDisconnectedMessageReceivedEvent event) {
-        log.info("RobotDisconnectedMessageReceivedEvent 수신: robotMacAddress = {}", event.macAddress());
-        robotService.disconnect(event.macAddress());
+        log.info("RobotDisconnectedMessageReceivedEvent 수신: robotEventId = {}, robotMacAddress = {}",
+                event.robotEventId(), event.macAddress());
+        robotService.disconnect(event.robotEventId(), event.macAddress());
     }
 }

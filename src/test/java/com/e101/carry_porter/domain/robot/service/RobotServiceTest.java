@@ -14,6 +14,7 @@ import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
 import com.e101.carry_porter.domain.robot.event.RobotAssignmentFailedEvent;
 import com.e101.carry_porter.domain.robot.exception.RobotErrorCode;
 import com.e101.carry_porter.domain.robot.exception.RobotException;
+import com.e101.carry_porter.domain.robot.repository.ProcessedRobotEventRepository;
 import com.e101.carry_porter.domain.robot.repository.RobotRepository;
 import com.e101.carry_porter.domain.robot.service.dto.request.AssignRobotServiceRequest;
 import com.e101.carry_porter.domain.robot.service.dto.response.AssignRobotServiceResponse;
@@ -36,6 +37,9 @@ class RobotServiceTest extends TransactionalIntegrationTestSupport {
     private RobotRepository robotRepository;
 
     @Autowired
+    private ProcessedRobotEventRepository processedRobotEventRepository;
+
+    @Autowired
     private MissionRepository missionRepository;
 
     @Autowired
@@ -48,27 +52,30 @@ class RobotServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("존재하지 않는 macAddress로 연결되면 새 로봇을 생성하고 IDLE 상태로 저장한다")
     void registerOrReconnectWithNewRobot() {
         // given
+        String robotEventId = "robot-event-register-1";
         String macAddress = "AA:BB:CC:DD:EE:10";
 
         // when
-        robotService.registerOrReconnect(macAddress);
+        robotService.registerOrReconnect(robotEventId, macAddress);
 
         // then
         Robot registeredRobot = robotRepository.findByMacAddress(macAddress).orElseThrow();
 
         assertThat(registeredRobot.getMacAddress()).isEqualTo(macAddress);
         assertThat(registeredRobot.getRobotStatus()).isEqualTo(RobotStatus.IDLE);
+        assertThat(processedRobotEventRepository.existsByRobotEventId(robotEventId)).isTrue();
     }
 
     @Test
     @DisplayName("OFFLINE 상태의 로봇이 다시 연결되면 IDLE 상태로 변경한다")
     void registerOrReconnectWithOfflineRobot() {
         // given
+        String robotEventId = "robot-event-register-2";
         Robot offlineRobot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:11"));
         offlineRobot.toOffline();
 
         // when
-        robotService.registerOrReconnect(offlineRobot.getMacAddress());
+        robotService.registerOrReconnect(robotEventId, offlineRobot.getMacAddress());
 
         // then
         Robot reconnectedRobot = robotRepository.findByMacAddress(offlineRobot.getMacAddress()).orElseThrow();
@@ -81,10 +88,11 @@ class RobotServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("IDLE 상태의 로봇이 다시 연결되면 상태를 그대로 유지한다")
     void registerOrReconnectWithIdleRobot() {
         // given
+        String robotEventId = "robot-event-register-3";
         Robot idleRobot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:12"));
 
         // when
-        robotService.registerOrReconnect(idleRobot.getMacAddress());
+        robotService.registerOrReconnect(robotEventId, idleRobot.getMacAddress());
 
         // then
         Robot reconnectedRobot = robotRepository.findByMacAddress(idleRobot.getMacAddress()).orElseThrow();
@@ -97,11 +105,12 @@ class RobotServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("BUSY 상태의 로봇이 다시 연결되면 상태를 그대로 유지한다")
     void registerOrReconnectWithBusyRobot() {
         // given
+        String robotEventId = "robot-event-register-4";
         Robot busyRobot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:13"));
         busyRobot.toBusy();
 
         // when
-        robotService.registerOrReconnect(busyRobot.getMacAddress());
+        robotService.registerOrReconnect(robotEventId, busyRobot.getMacAddress());
 
         // then
         Robot reconnectedRobot = robotRepository.findByMacAddress(busyRobot.getMacAddress()).orElseThrow();
@@ -114,26 +123,29 @@ class RobotServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("로봇 연결이 끊기면 상태를 OFFLINE으로 변경한다")
     void disconnect() {
         // given
+        String robotEventId = "robot-event-disconnect-1";
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:14"));
 
         // when
-        robotService.disconnect(robot.getMacAddress());
+        robotService.disconnect(robotEventId, robot.getMacAddress());
 
         // then
         Robot disconnectedRobot = robotRepository.findByMacAddress(robot.getMacAddress()).orElseThrow();
 
         assertThat(disconnectedRobot.getRobotStatus()).isEqualTo(RobotStatus.OFFLINE);
+        assertThat(processedRobotEventRepository.existsByRobotEventId(robotEventId)).isTrue();
     }
 
     @Test
     @DisplayName("BUSY 상태의 로봇 연결이 끊겨도 상태를 OFFLINE으로 변경한다")
     void disconnectWithBusyRobot() {
         // given
+        String robotEventId = "robot-event-disconnect-2";
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:15"));
         robot.toBusy();
 
         // when
-        robotService.disconnect(robot.getMacAddress());
+        robotService.disconnect(robotEventId, robot.getMacAddress());
 
         // then
         Robot disconnectedRobot = robotRepository.findByMacAddress(robot.getMacAddress()).orElseThrow();

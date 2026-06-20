@@ -1,6 +1,7 @@
 package com.e101.carry_porter.domain.robot.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e101.carry_porter.domain.robot.entity.ProcessedRobotEvent;
 import com.e101.carry_porter.domain.robot.repository.ProcessedRobotEventRepository;
@@ -66,5 +67,31 @@ class RobotEventDedupServiceTest extends TransactionalIntegrationTestSupport {
 
         // then
         assertThat(duplicated).isTrue();
+    }
+
+    @Test
+    @DisplayName("처리가 완료된 robotEventId를 저장하면 processed_robot_events 테이블에 저장된다")
+    void markProcessedRobotEvent() {
+        // given
+        String robotEventId = "robot-event-3";
+
+        // when
+        robotEventDedupService.markProcessedRobotEvent(robotEventId, "AA:BB:CC:DD:EE:03");
+
+        // then
+        assertThat(processedRobotEventRepository.existsByRobotEventId(robotEventId)).isTrue();
+    }
+
+    @Test
+    @DisplayName("robotEventId가 비어 있으면 처리 완료 저장 시 IllegalArgumentException을 던진다")
+    void markProcessedRobotEventWithBlankRobotEventId() {
+        // given
+        String blankRobotEventId = " ";
+
+        // when & then
+        assertThatThrownBy(() -> robotEventDedupService.markProcessedRobotEvent(
+                blankRobotEventId,
+                "AA:BB:CC:DD:EE:04"
+        )).isInstanceOf(IllegalArgumentException.class);
     }
 }

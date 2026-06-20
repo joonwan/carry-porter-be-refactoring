@@ -25,10 +25,11 @@ public class RobotDisconnectedServiceActivator {
         log.info("유언장 발행 mac address = {}", inboundMessage.macAddress());
 
         eventPublisher.publishEvent(new RobotDisconnectedMessageReceivedEvent(
+                inboundMessage.payload().robotEventId(),
                 inboundMessage.macAddress()
         ));
 
-        log.info("RobotDisconnectedMessageReceivedEvent 발행: robotMacAddress = {}",
-                inboundMessage.macAddress());
+        log.info("RobotDisconnectedMessageReceivedEvent 발행: robotEventId = {}, robotMacAddress = {}",
+                inboundMessage.payload().robotEventId(), inboundMessage.macAddress());
     }
 }

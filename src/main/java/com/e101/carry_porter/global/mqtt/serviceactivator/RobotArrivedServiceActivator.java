@@ -26,11 +26,12 @@ public class RobotArrivedServiceActivator {
 
         eventPublisher.publishEvent(new RobotArrivedMessageReceivedEvent(
                 payload.missionId(),
+                payload.robotEventId(),
                 inboundMessage.macAddress(),
                 payload.userId()
         ));
 
-        log.info("RobotArrivedMessageReceivedEvent 발행: missionId = {}, robotMacAddress = {}, userId = {}",
-                payload.missionId(), inboundMessage.macAddress(), payload.userId());
+        log.info("RobotArrivedMessageReceivedEvent 발행: missionId = {}, robotEventId = {}, robotMacAddress = {}, userId = {}",
+                payload.missionId(), payload.robotEventId(), inboundMessage.macAddress(), payload.userId());
     }
 }

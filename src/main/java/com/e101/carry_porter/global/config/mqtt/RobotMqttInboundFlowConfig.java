@@ -63,7 +63,7 @@ public class RobotMqttInboundFlowConfig {
         );
 
         if (duplicated) {
-            log.info("중복 robot 이벤트이므로 라우팅을 건너뜁니다: robotEventId = {}, eventName = {}, robotMacAddress = {}",
+            log.info("robot 이벤트 처리를 건너뜁니다: robotEventId = {}, eventName = {}, robotMacAddress = {}",
                     inboundMessage.payload().robotEventId(), inboundMessage.eventName(), inboundMessage.macAddress());
         }
 

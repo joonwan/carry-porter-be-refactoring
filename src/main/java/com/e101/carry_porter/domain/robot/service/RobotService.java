@@ -28,22 +28,25 @@ public class RobotService {
 
     private final RobotRepository robotRepository;
     private final MissionRepository missionRepository;
+    private final RobotEventDedupService robotEventDedupService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
-    public void registerOrReconnect(String macAddress) {
+    public void registerOrReconnect(String robotEventId, String macAddress) {
         log.info("robot 등록 또는 재연결 처리 시작: macAddress = {}", macAddress);
 
         Robot robot = robotRepository.findByMacAddress(macAddress)
                 .map(this::synchronizeRobotStatus)
                 .orElseGet(() -> createConnectedRobot(macAddress));
 
+        robotEventDedupService.markProcessedRobotEvent(robotEventId, macAddress);
+
         log.info("robot 등록 또는 재연결 처리 완료: robotId = {}, macAddress = {}, robotStatus = {}",
                 robot.getId(), robot.getMacAddress(), robot.getRobotStatus());
     }
 
     @Transactional
-    public void disconnect(String macAddress) {
+    public void disconnect(String robotEventId, String macAddress) {
         log.info("robot 연결 끊김 처리 시작: macAddress = {}", macAddress);
 
         Robot robot = robotRepository.findByMacAddress(macAddress)
@@ -51,6 +54,7 @@ public class RobotService {
 
         RobotStatus previousStatus = robot.getRobotStatus();
         robot.toOffline();
+        robotEventDedupService.markProcessedRobotEvent(robotEventId, macAddress);
 
         log.info("robot 상태가 OFFLINE 으로 변경되었습니다: robotId = {}, macAddress = {}, previousStatus = {}, currentStatus = {}",
                 robot.getId(), robot.getMacAddress(), previousStatus, robot.getRobotStatus());

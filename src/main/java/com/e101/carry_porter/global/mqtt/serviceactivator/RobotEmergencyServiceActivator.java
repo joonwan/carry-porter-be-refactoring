@@ -26,13 +26,14 @@ public class RobotEmergencyServiceActivator {
 
         eventPublisher.publishEvent(new RobotEmergencyMessageReceivedEvent(
                 payload.missionId(),
+                payload.robotEventId(),
                 inboundMessage.macAddress(),
                 payload.userId(),
                 payload.failureCode(),
                 payload.message()
         ));
 
-        log.info("RobotEmergencyMessageReceivedEvent 발행: missionId = {}, robotMacAddress = {}, userId = {}, failureCode = {}",
-                payload.missionId(), inboundMessage.macAddress(), payload.userId(), payload.failureCode());
+        log.info("RobotEmergencyMessageReceivedEvent 발행: missionId = {}, robotEventId = {}, robotMacAddress = {}, userId = {}, failureCode = {}",
+                payload.missionId(), payload.robotEventId(), inboundMessage.macAddress(), payload.userId(), payload.failureCode());
     }
 }

@@ -45,26 +45,27 @@ public class MissionStatusEventListener {
     @Async("eventTaskExecutor")
     @EventListener
     public void handleRobotArrivedMessageReceivedEvent(RobotArrivedMessageReceivedEvent event) {
-        log.info("RobotArrivedMessageReceivedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}",
-                event.missionId(), event.robotMacAddress(), event.userId());
-        missionService.arrive(event.missionId(), event.robotMacAddress(), event.userId());
+        log.info("RobotArrivedMessageReceivedEvent 수신: missionId = {}, robotEventId = {}, robotMacAddress = {}, userId = {}",
+                event.missionId(), event.robotEventId(), event.robotMacAddress(), event.userId());
+        missionService.arrive(event.missionId(), event.robotEventId(), event.robotMacAddress(), event.userId());
     }
 
     @Async("eventTaskExecutor")
     @EventListener
     public void handleRobotReturnedMessageReceivedEvent(RobotReturnedMessageReceivedEvent event) {
-        log.info("RobotReturnedMessageReceivedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}",
-                event.missionId(), event.robotMacAddress(), event.userId());
-        missionService.finish(event.missionId(), event.robotMacAddress(), event.userId());
+        log.info("RobotReturnedMessageReceivedEvent 수신: missionId = {}, robotEventId = {}, robotMacAddress = {}, userId = {}",
+                event.missionId(), event.robotEventId(), event.robotMacAddress(), event.userId());
+        missionService.finish(event.missionId(), event.robotEventId(), event.robotMacAddress(), event.userId());
     }
 
     @Async("eventTaskExecutor")
     @EventListener
     public void handleRobotEmergencyMessageReceivedEvent(RobotEmergencyMessageReceivedEvent event) {
-        log.info("RobotEmergencyMessageReceivedEvent 수신: missionId = {}, robotMacAddress = {}, userId = {}, failureCode = {}",
-                event.missionId(), event.robotMacAddress(), event.userId(), event.failureCode());
+        log.info("RobotEmergencyMessageReceivedEvent 수신: missionId = {}, robotEventId = {}, robotMacAddress = {}, userId = {}, failureCode = {}",
+                event.missionId(), event.robotEventId(), event.robotMacAddress(), event.userId(), event.failureCode());
         missionService.fail(
                 event.missionId(),
+                event.robotEventId(),
                 event.robotMacAddress(),
                 event.userId(),
                 event.failureCode(),

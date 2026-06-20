@@ -65,26 +65,36 @@ class MissionStatusEventListenerTest {
     @DisplayName("RobotArrivedMessageReceivedEvent를 수신하면 missionService.arrive()를 한 번 호출한다")
     void handleRobotArrivedMessageReceivedEvent() {
         // given
-        RobotArrivedMessageReceivedEvent event = new RobotArrivedMessageReceivedEvent(1L, "AA:BB:CC:DD:EE:01", 3L);
+        RobotArrivedMessageReceivedEvent event = new RobotArrivedMessageReceivedEvent(
+                1L,
+                "robot-event-1",
+                "AA:BB:CC:DD:EE:01",
+                3L
+        );
 
         // when
         missionStatusEventListener.handleRobotArrivedMessageReceivedEvent(event);
 
         // then
-        verify(missionService, times(1)).arrive(1L, "AA:BB:CC:DD:EE:01", 3L);
+        verify(missionService, times(1)).arrive(1L, "robot-event-1", "AA:BB:CC:DD:EE:01", 3L);
     }
 
     @Test
     @DisplayName("RobotReturnedMessageReceivedEvent를 수신하면 missionService.finish()를 한 번 호출한다")
     void handleRobotReturnedMessageReceivedEvent() {
         // given
-        RobotReturnedMessageReceivedEvent event = new RobotReturnedMessageReceivedEvent(1L, "AA:BB:CC:DD:EE:01", 3L);
+        RobotReturnedMessageReceivedEvent event = new RobotReturnedMessageReceivedEvent(
+                1L,
+                "robot-event-2",
+                "AA:BB:CC:DD:EE:01",
+                3L
+        );
 
         // when
         missionStatusEventListener.handleRobotReturnedMessageReceivedEvent(event);
 
         // then
-        verify(missionService, times(1)).finish(1L, "AA:BB:CC:DD:EE:01", 3L);
+        verify(missionService, times(1)).finish(1L, "robot-event-2", "AA:BB:CC:DD:EE:01", 3L);
     }
 
     @Test
@@ -93,6 +103,7 @@ class MissionStatusEventListenerTest {
         // given
         RobotEmergencyMessageReceivedEvent event = new RobotEmergencyMessageReceivedEvent(
                 1L,
+                "robot-event-3",
                 "AA:BB:CC:DD:EE:01",
                 3L,
                 "ROBOT_EMERGENCY",
@@ -105,6 +116,7 @@ class MissionStatusEventListenerTest {
         // then
         verify(missionService, times(1)).fail(
                 1L,
+                "robot-event-3",
                 "AA:BB:CC:DD:EE:01",
                 3L,
                 "ROBOT_EMERGENCY",

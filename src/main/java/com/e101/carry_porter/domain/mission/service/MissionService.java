@@ -13,6 +13,7 @@ import com.e101.carry_porter.domain.mission.exception.MissionException;
 import com.e101.carry_porter.domain.mission.repository.MissionRepository;
 import com.e101.carry_porter.domain.mission.service.dto.request.CreateMissionServiceRequest;
 import com.e101.carry_porter.domain.mission.service.dto.response.CreateMissionServiceResponse;
+import com.e101.carry_porter.domain.robot.service.RobotEventDedupService;
 import com.e101.carry_porter.domain.user.entity.User;
 import com.e101.carry_porter.domain.user.exception.UserErrorCode;
 import com.e101.carry_porter.domain.user.exception.UserException;
@@ -40,6 +41,7 @@ public class MissionService {
 
     private final MissionRepository missionRepository;
     private final UserRepository userRepository;
+    private final RobotEventDedupService robotEventDedupService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -87,7 +89,7 @@ public class MissionService {
     }
 
     @Transactional
-    public void arrive(Long missionId, String robotMacAddress, Long userId) {
+    public void arrive(Long missionId, String robotEventId, String robotMacAddress, Long userId) {
         log.info("mission 도착 처리: missionId = {}, robotMacAddress = {}, userId = {}",
                 missionId, robotMacAddress, userId);
 
@@ -100,6 +102,7 @@ public class MissionService {
                 || mission.getMissionStatus() == MissionStatus.RETURNING
                 || mission.getMissionStatus() == MissionStatus.FINISHED
                 || mission.getMissionStatus() == MissionStatus.FAILED) {
+            robotEventDedupService.markProcessedRobotEvent(robotEventId, robotMacAddress);
             log.info("이미 도착 처리되었거나 이후 단계로 진행된 mission 이므로 도착 처리를 건너뜁니다: missionId = {}, currentStatus = {}",
                     missionId, mission.getMissionStatus());
             return;
@@ -108,6 +111,7 @@ public class MissionService {
         validateArrivalStatus(mission);
 
         mission.arrive();
+        robotEventDedupService.markProcessedRobotEvent(robotEventId, robotMacAddress);
 
         eventPublisher.publishEvent(new MissionArrivedEvent(
                 missionId,
@@ -160,7 +164,7 @@ public class MissionService {
     }
 
     @Transactional
-    public void finish(Long missionId, String robotMacAddress, Long userId) {
+    public void finish(Long missionId, String robotEventId, String robotMacAddress, Long userId) {
         log.info("mission 종료 처리: missionId = {}, robotMacAddress = {}, userId = {}",
                 missionId, robotMacAddress, userId);
 
@@ -170,11 +174,13 @@ public class MissionService {
         validateArrivalTarget(mission, robotMacAddress, userId);
 
         if (mission.getMissionStatus() == MissionStatus.FINISHED) {
+            robotEventDedupService.markProcessedRobotEvent(robotEventId, robotMacAddress);
             log.info("이미 종료 처리된 mission 이므로 중복 종료 처리를 건너뜁니다: missionId = {}", missionId);
             return;
         }
 
         if (mission.getMissionStatus() == MissionStatus.FAILED) {
+            robotEventDedupService.markProcessedRobotEvent(robotEventId, robotMacAddress);
             log.warn("이미 실패 처리된 mission 이므로 종료 처리를 건너뜁니다: missionId = {}", missionId);
             return;
         }
@@ -182,6 +188,7 @@ public class MissionService {
         validateFinishStatus(mission);
 
         mission.finish();
+        robotEventDedupService.markProcessedRobotEvent(robotEventId, robotMacAddress);
 
         eventPublisher.publishEvent(new MissionFinishedEvent(
                 missionId,
@@ -196,7 +203,7 @@ public class MissionService {
     }
 
     @Transactional
-    public void fail(Long missionId, String robotMacAddress, Long userId, String failureCode, String message) {
+    public void fail(Long missionId, String robotEventId, String robotMacAddress, Long userId, String failureCode, String message) {
         log.info("mission 실패 처리: missionId = {}, robotMacAddress = {}, userId = {}, failureCode = {}, message = {}",
                 missionId, robotMacAddress, userId, failureCode, message);
 
@@ -206,16 +213,19 @@ public class MissionService {
         validateArrivalTarget(mission, robotMacAddress, userId);
 
         if (mission.getMissionStatus() == MissionStatus.FINISHED) {
+            robotEventDedupService.markProcessedRobotEvent(robotEventId, robotMacAddress);
             log.warn("이미 종료된 mission 이므로 실패 처리를 건너뜁니다: missionId = {}", missionId);
             return;
         }
 
         if (mission.getMissionStatus() == MissionStatus.FAILED) {
+            robotEventDedupService.markProcessedRobotEvent(robotEventId, robotMacAddress);
             log.info("이미 실패 처리된 mission 이므로 중복 실패 처리를 건너뜁니다: missionId = {}", missionId);
             return;
         }
 
         mission.fail();
+        robotEventDedupService.markProcessedRobotEvent(robotEventId, robotMacAddress);
 
         eventPublisher.publishEvent(new MissionFailedEvent(
                 missionId,

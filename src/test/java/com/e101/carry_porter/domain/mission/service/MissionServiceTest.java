@@ -17,6 +17,7 @@ import com.e101.carry_porter.domain.mission.repository.MissionRepository;
 import com.e101.carry_porter.domain.mission.service.dto.request.CreateMissionServiceRequest;
 import com.e101.carry_porter.domain.mission.service.dto.response.CreateMissionServiceResponse;
 import com.e101.carry_porter.domain.robot.entity.Robot;
+import com.e101.carry_porter.domain.robot.repository.ProcessedRobotEventRepository;
 import com.e101.carry_porter.domain.robot.repository.RobotRepository;
 import com.e101.carry_porter.domain.user.entity.User;
 import com.e101.carry_porter.domain.user.exception.UserErrorCode;
@@ -41,6 +42,9 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
 
     @Autowired
     private RobotRepository robotRepository;
+
+    @Autowired
+    private ProcessedRobotEventRepository processedRobotEventRepository;
 
     @Autowired
     private ApplicationEvents events;
@@ -162,6 +166,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("이동 중인 미션을 도착 처리하면 ARRIVED 상태로 변경한다")
     void arrive() {
         // given
+        String robotEventId = "robot-event-arrive-1";
         User user = userRepository.save(User.createUser("arrive-user", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:31"));
         Mission mission = missionRepository.save(Mission.createMission(user));
@@ -169,12 +174,13 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         mission.dispatch();
 
         // when
-        missionService.arrive(mission.getId(), robot.getMacAddress(), user.getId());
+        missionService.arrive(mission.getId(), robotEventId, robot.getMacAddress(), user.getId());
 
         // then
         Mission arrivedMission = missionRepository.findById(mission.getId()).orElseThrow();
 
         assertThat(arrivedMission.getMissionStatus()).isEqualTo(MissionStatus.ARRIVED);
+        assertThat(processedRobotEventRepository.existsByRobotEventId(robotEventId)).isTrue();
         assertThat(events.stream(MissionArrivedEvent.class)).hasSize(1);
         assertThat(events.stream(MissionArrivedEvent.class).findFirst()).isPresent()
                 .get()
@@ -190,6 +196,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("이미 ARRIVED 상태인 미션에 도착 메시지가 다시 와도 예외 없이 그대로 유지한다")
     void arriveWithAlreadyArrivedMissionStatus() {
         // given
+        String robotEventId = "robot-event-arrive-2";
         User user = userRepository.save(User.createUser("arrive-user-duplicate", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:34"));
         Mission mission = missionRepository.save(Mission.createMission(user));
@@ -198,7 +205,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         mission.arrive();
 
         // when
-        missionService.arrive(mission.getId(), robot.getMacAddress(), user.getId());
+        missionService.arrive(mission.getId(), robotEventId, robot.getMacAddress(), user.getId());
 
         // then
         Mission unchangedMission = missionRepository.findById(mission.getId()).orElseThrow();
@@ -211,6 +218,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("이미 RETURNING 상태인 미션에 늦게 도착 메시지가 와도 상태를 덮어쓰지 않는다")
     void arriveWithReturningMissionStatus() {
         // given
+        String robotEventId = "robot-event-arrive-3";
         User user = userRepository.save(User.createUser("arrive-user-returning", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:35"));
         Mission mission = missionRepository.save(Mission.createMission(user));
@@ -220,7 +228,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         mission.startReturning();
 
         // when
-        missionService.arrive(mission.getId(), robot.getMacAddress(), user.getId());
+        missionService.arrive(mission.getId(), robotEventId, robot.getMacAddress(), user.getId());
 
         // then
         Mission unchangedMission = missionRepository.findById(mission.getId()).orElseThrow();
@@ -240,7 +248,12 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         mission.dispatch();
 
         // when & then
-        assertThatThrownBy(() -> missionService.arrive(mission.getId(), "AA:BB:CC:DD:EE:99", anotherUser.getId()))
+        assertThatThrownBy(() -> missionService.arrive(
+                mission.getId(),
+                "robot-event-arrive-4",
+                "AA:BB:CC:DD:EE:99",
+                anotherUser.getId()
+        ))
                 .isInstanceOf(MissionException.class)
                 .extracting(exception -> ((MissionException) exception).getErrorCode())
                 .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
@@ -256,7 +269,12 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         mission.assignRobot(robot);
 
         // when & then
-        assertThatThrownBy(() -> missionService.arrive(mission.getId(), robot.getMacAddress(), user.getId()))
+        assertThatThrownBy(() -> missionService.arrive(
+                mission.getId(),
+                "robot-event-arrive-5",
+                robot.getMacAddress(),
+                user.getId()
+        ))
                 .isInstanceOf(MissionException.class)
                 .extracting(exception -> ((MissionException) exception).getErrorCode())
                 .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
@@ -332,6 +350,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("복귀 중인 미션을 종료 처리하면 FINISHED 상태로 변경되고 로봇은 IDLE 상태가 된다")
     void finish() {
         // given
+        String robotEventId = "robot-event-finish-1";
         User user = userRepository.save(User.createUser("finish-user", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:51"));
         Mission mission = missionRepository.save(Mission.createMission(user));
@@ -341,12 +360,13 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         mission.startReturning();
 
         // when
-        missionService.finish(mission.getId(), robot.getMacAddress(), user.getId());
+        missionService.finish(mission.getId(), robotEventId, robot.getMacAddress(), user.getId());
 
         // then
         Mission finishedMission = missionRepository.findById(mission.getId()).orElseThrow();
 
         assertThat(finishedMission.getMissionStatus()).isEqualTo(MissionStatus.FINISHED);
+        assertThat(processedRobotEventRepository.existsByRobotEventId(robotEventId)).isTrue();
         assertThat(finishedMission.getRobot().getRobotStatus()).isEqualTo(com.e101.carry_porter.domain.robot.entity.RobotStatus.IDLE);
         assertThat(events.stream(MissionFinishedEvent.class)).hasSize(1);
         assertThat(events.stream(MissionFinishedEvent.class).findFirst()).isPresent()
@@ -363,6 +383,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("이미 FINISHED 상태인 미션에 종료 메시지가 다시 와도 예외 없이 그대로 유지한다")
     void finishWithAlreadyFinishedMissionStatus() {
         // given
+        String robotEventId = "robot-event-finish-2";
         User user = userRepository.save(User.createUser("finish-user-duplicate", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:54"));
         Mission mission = missionRepository.save(Mission.createMission(user));
@@ -373,7 +394,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         mission.finish();
 
         // when
-        missionService.finish(mission.getId(), robot.getMacAddress(), user.getId());
+        missionService.finish(mission.getId(), robotEventId, robot.getMacAddress(), user.getId());
 
         // then
         Mission unchangedMission = missionRepository.findById(mission.getId()).orElseThrow();
@@ -386,6 +407,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("이미 FAILED 상태인 미션에 종료 메시지가 와도 상태를 덮어쓰지 않는다")
     void finishWithFailedMissionStatus() {
         // given
+        String robotEventId = "robot-event-finish-3";
         User user = userRepository.save(User.createUser("finish-user-failed", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:55"));
         Mission mission = missionRepository.save(Mission.createMission(user));
@@ -394,7 +416,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         mission.fail();
 
         // when
-        missionService.finish(mission.getId(), robot.getMacAddress(), user.getId());
+        missionService.finish(mission.getId(), robotEventId, robot.getMacAddress(), user.getId());
 
         // then
         Mission unchangedMission = missionRepository.findById(mission.getId()).orElseThrow();
@@ -417,7 +439,12 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         mission.startReturning();
 
         // when & then
-        assertThatThrownBy(() -> missionService.finish(mission.getId(), "AA:BB:CC:DD:EE:99", anotherUser.getId()))
+        assertThatThrownBy(() -> missionService.finish(
+                mission.getId(),
+                "robot-event-finish-4",
+                "AA:BB:CC:DD:EE:99",
+                anotherUser.getId()
+        ))
                 .isInstanceOf(MissionException.class)
                 .extracting(exception -> ((MissionException) exception).getErrorCode())
                 .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
@@ -435,7 +462,12 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         mission.arrive();
 
         // when & then
-        assertThatThrownBy(() -> missionService.finish(mission.getId(), robot.getMacAddress(), user.getId()))
+        assertThatThrownBy(() -> missionService.finish(
+                mission.getId(),
+                "robot-event-finish-5",
+                robot.getMacAddress(),
+                user.getId()
+        ))
                 .isInstanceOf(MissionException.class)
                 .extracting(exception -> ((MissionException) exception).getErrorCode())
                 .isEqualTo(MissionErrorCode.INVALID_MISSION_STATUS);
@@ -445,6 +477,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("진행 중인 미션을 실패 처리하면 FAILED 상태로 변경되고 로봇은 기존 BUSY 상태를 유지한다")
     void fail() {
         // given
+        String robotEventId = "robot-event-fail-1";
         User user = userRepository.save(User.createUser("fail-user", "password"));
         Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:61"));
         Mission mission = missionRepository.save(Mission.createMission(user));
@@ -452,12 +485,20 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         mission.dispatch();
 
         // when
-        missionService.fail(mission.getId(), robot.getMacAddress(), user.getId(), "ROBOT_EMERGENCY", "obstacle detected");
+        missionService.fail(
+                mission.getId(),
+                robotEventId,
+                robot.getMacAddress(),
+                user.getId(),
+                "ROBOT_EMERGENCY",
+                "obstacle detected"
+        );
 
         // then
         Mission failedMission = missionRepository.findById(mission.getId()).orElseThrow();
 
         assertThat(failedMission.getMissionStatus()).isEqualTo(MissionStatus.FAILED);
+        assertThat(processedRobotEventRepository.existsByRobotEventId(robotEventId)).isTrue();
         assertThat(failedMission.getRobot().getRobotStatus()).isEqualTo(com.e101.carry_porter.domain.robot.entity.RobotStatus.BUSY);
         assertThat(events.stream(MissionFailedEvent.class)).hasSize(1);
         assertThat(events.stream(MissionFailedEvent.class).findFirst()).isPresent()
@@ -525,6 +566,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         // when & then
         assertThatThrownBy(() -> missionService.fail(
                 mission.getId(),
+                "robot-event-fail-2",
                 "AA:BB:CC:DD:EE:99",
                 anotherUser.getId(),
                 "ROBOT_EMERGENCY",
@@ -551,6 +593,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         // when
         missionService.fail(
                 finishedMission.getId(),
+                "robot-event-fail-3",
                 robot.getMacAddress(),
                 user.getId(),
                 "ROBOT_EMERGENCY",
@@ -578,6 +621,7 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
         // when
         missionService.fail(
                 failedMission.getId(),
+                "robot-event-fail-4",
                 robot.getMacAddress(),
                 user.getId(),
                 "ROBOT_EMERGENCY",
