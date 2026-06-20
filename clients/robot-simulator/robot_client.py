@@ -3,6 +3,7 @@ import logging
 import os
 import threading
 import time
+import uuid
 from dataclasses import dataclass
 from enum import Enum
 
@@ -92,10 +93,36 @@ def parse_command_payload(payload: str) -> dict | None:
     }
 
 
+def build_robot_event_payload(
+        mission_id: int | None = None,
+        user_id: int | None = None,
+        failure_code: str | None = None,
+        message: str | None = None,
+) -> dict:
+    payload = {
+        "robot_event_id": str(uuid.uuid4()),
+    }
+
+    if mission_id is not None:
+        payload["missionId"] = mission_id
+
+    if user_id is not None:
+        payload["userId"] = user_id
+
+    if failure_code is not None:
+        payload["failureCode"] = failure_code
+
+    if message is not None:
+        payload["message"] = message
+
+    return payload
+
+
 def publish_connected(client: mqtt.Client) -> None:
     topic = build_connected_topic(ROBOT_MAC_ADDRESS)
-    client.publish(topic, payload="", qos=MQTT_QOS)
-    logger.info("connected 이벤트 발행: topic=%s", topic)
+    payload = json.dumps(build_robot_event_payload(), separators=(",", ":"))
+    client.publish(topic, payload=payload, qos=MQTT_QOS)
+    logger.info("connected 이벤트 발행: topic=%s payload=%s", topic, payload)
 
 
 def simulate_move_and_publish(
@@ -110,7 +137,11 @@ def simulate_move_and_publish(
     logger.info("%s 명령 수신. %s초 동안 이동 시뮬레이션 시작", action_name, SIMULATED_TRAVEL_SECONDS)
     time.sleep(SIMULATED_TRAVEL_SECONDS)
 
-    message = json.dumps(payload, separators=(",", ":"))
+    event_payload = build_robot_event_payload(
+        mission_id=payload["missionId"],
+        user_id=payload["userId"],
+    )
+    message = json.dumps(event_payload, separators=(",", ":"))
     client.publish(event_topic, payload=message, qos=MQTT_QOS)
     logger.info("%s 이벤트 발행 완료: topic=%s payload=%s", action_name, event_topic, message)
 
@@ -267,7 +298,7 @@ def create_client() -> mqtt.Client:
     # 비정상 종료 시 broker 가 대신 disconnected 이벤트를 발행하도록 유언 메시지를 등록한다.
     client.will_set(
         topic=build_disconnected_topic(ROBOT_MAC_ADDRESS),
-        payload="",
+        payload=json.dumps(build_robot_event_payload(), separators=(",", ":")),
         qos=MQTT_QOS,
         retain=False,
     )

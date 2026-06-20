@@ -11,6 +11,11 @@ import org.springframework.messaging.MessageChannel;
 public class RobotMqttInboundChannelConfig {
 
     @Bean
+    public MessageChannel robotEventDedupFilterChannel() {
+        return new DirectChannel();
+    }
+
+    @Bean
     public MessageChannel robotEventRouterChannel() {
         return new DirectChannel();
     }

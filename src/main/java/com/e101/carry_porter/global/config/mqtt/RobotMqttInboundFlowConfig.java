@@ -5,11 +5,13 @@ import com.e101.carry_porter.domain.robot.mqtt.RobotInboundPayload;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Collection;
 import java.util.List;
+import com.e101.carry_porter.domain.robot.service.RobotEventDedupService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.integration.annotation.Filter;
 import org.springframework.integration.annotation.Router;
 import org.springframework.integration.annotation.Transformer;
 import org.springframework.integration.router.AbstractMessageRouter;
@@ -31,8 +33,9 @@ public class RobotMqttInboundFlowConfig {
     private static final String EVENT_EMERGENCY = "emergency";
 
     private final ObjectMapper objectMapper;
+    private final RobotEventDedupService robotEventDedupService;
 
-    @Transformer(inputChannel = "mqttInboundChannel", outputChannel = "robotEventRouterChannel")
+    @Transformer(inputChannel = "mqttInboundChannel", outputChannel = "robotEventDedupFilterChannel")
     public RobotInboundMessage robotInboundTransformer(Message<String> message) {
         String topic = String.valueOf(message.getHeaders().get(MqttHeaders.RECEIVED_TOPIC));
         String[] topicTokens = topic.split("/");
@@ -45,11 +48,26 @@ public class RobotMqttInboundFlowConfig {
         try {
             RobotInboundPayload inboundPayload = StringUtils.hasText(payload)
                     ? objectMapper.readValue(payload, RobotInboundPayload.class)
-                    : new RobotInboundPayload(null, null, null, null);
+                    : new RobotInboundPayload(null, null, null, null, null);
             return new RobotInboundMessage(macAddress, eventName, inboundPayload);
         } catch (Exception exception) {
             throw new IllegalArgumentException("MQTT inbound payload 역직렬화에 실패했습니다.", exception);
         }
+    }
+
+    @Filter(inputChannel = "robotEventDedupFilterChannel", outputChannel = "robotEventRouterChannel")
+    public boolean robotEventDedupFilter(RobotInboundMessage inboundMessage) {
+        boolean duplicated = robotEventDedupService.isDuplicatedRobotEvent(
+                inboundMessage.payload().robotEventId(),
+                inboundMessage.macAddress()
+        );
+
+        if (duplicated) {
+            log.info("중복 robot 이벤트이므로 라우팅을 건너뜁니다: robotEventId = {}, eventName = {}, robotMacAddress = {}",
+                    inboundMessage.payload().robotEventId(), inboundMessage.eventName(), inboundMessage.macAddress());
+        }
+
+        return !duplicated;
     }
 
     @Bean
