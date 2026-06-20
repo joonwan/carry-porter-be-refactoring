@@ -24,6 +24,7 @@ const missionSteps = [
 ];
 
 const eventLabels = {
+  MISSION_CREATED: "미션 생성",
   ROBOT_ASSIGNED: "로봇 배정 완료",
   MISSION_STARTED: "로봇 출발",
   MISSION_ARRIVED: "목적지 도착",
@@ -38,7 +39,6 @@ function App() {
   const [expiresAt, setExpiresAt] = useState(() => localStorage.getItem("expiresAt") || "");
   const [username, setUsername] = useState(() => localStorage.getItem("username") || "");
   const [missionId, setMissionId] = useState(() => localStorage.getItem("missionId") || "");
-  const [lastEventId, setLastEventId] = useState(() => localStorage.getItem("lastNotificationEventId") || "");
   const [missionStatus, setMissionStatus] = useState("READY");
   const [events, setEvents] = useState([]);
   const [sseStatus, setSseStatus] = useState("DISCONNECTED");
@@ -168,12 +168,10 @@ function App() {
       localStorage.removeItem("expiresAt");
       localStorage.removeItem("username");
       localStorage.removeItem("missionId");
-      localStorage.removeItem("lastNotificationEventId");
       setToken("");
       setExpiresAt("");
       setUsername("");
       setMissionId("");
-      setLastEventId("");
       setMissionStatus("READY");
       setEvents([]);
       setSseStatus("DISCONNECTED");
@@ -192,7 +190,6 @@ function App() {
         headers: {
           Accept: "text/event-stream",
           Authorization: `Bearer ${accessToken}`,
-          ...(lastEventId ? { "Last-Event-ID": lastEventId } : {}),
         },
         signal: controller.signal,
       });
@@ -236,24 +233,25 @@ function App() {
 
   function handleSseChunk(chunk) {
     const lines = chunk.split("\n");
-    const eventId = lines.find((line) => line.startsWith("id:"))?.replace("id:", "").trim();
     const eventName = lines.find((line) => line.startsWith("event:"))?.replace("event:", "").trim();
     const data = lines
       .filter((line) => line.startsWith("data:"))
       .map((line) => line.replace("data:", "").trim())
       .join("");
 
-    if (!data || eventName === "connect") {
+    if (!data) {
+      return;
+    }
+
+    if (eventName === "connect") {
+      localStorage.removeItem("missionId");
+      setMissionId("");
+      setMissionStatus("READY");
       return;
     }
 
     try {
       const payload = JSON.parse(data);
-
-      if (eventId) {
-        localStorage.setItem("lastNotificationEventId", eventId);
-        setLastEventId(eventId);
-      }
 
       appendEvent(payload);
 

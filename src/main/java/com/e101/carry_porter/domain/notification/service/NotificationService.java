@@ -1,5 +1,8 @@
 package com.e101.carry_porter.domain.notification.service;
 
+import com.e101.carry_porter.domain.mission.entity.Mission;
+import com.e101.carry_porter.domain.mission.entity.MissionStatus;
+import com.e101.carry_porter.domain.mission.repository.MissionRepository;
 import com.e101.carry_porter.domain.notification.dto.NotificationPayload;
 import com.e101.carry_porter.domain.notification.entity.Notification;
 import com.e101.carry_porter.domain.notification.event.NotificationCreatedEvent;
@@ -14,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyEmitter;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import org.springframework.util.StringUtils;
 
 @Slf4j
 @Service
@@ -24,12 +26,20 @@ public class NotificationService {
 
     // SSE 연결을 30분 동안 유지
     private static final long DEFAULT_TIMEOUT = 30L * 60L * 1000L;
+    private static final List<MissionStatus> ACTIVE_MISSION_STATUSES = List.of(
+            MissionStatus.CREATED,
+            MissionStatus.ASSIGNED,
+            MissionStatus.DISPATCHED,
+            MissionStatus.ARRIVED,
+            MissionStatus.RETURNING
+    );
 
     private final NotificationEmitterRepository notificationEmitterRepository;
     private final NotificationRepository notificationRepository;
+    private final MissionRepository missionRepository;
     private final ApplicationEventPublisher eventPublisher;
 
-    public SseEmitter createConnection(Long userId, String lastEventIdHeader) {
+    public SseEmitter createConnection(Long userId) {
         SseEmitter emitter = new SseEmitter(DEFAULT_TIMEOUT);
 
         // 동일 사용자의 기존 연결이 있으면 종료 후 새 연결로 교체
@@ -38,8 +48,7 @@ public class NotificationService {
 
         notificationEmitterRepository.save(userId, emitter);
         registerEmitterCallbacks(userId, emitter);
-        sendConnectEvent(userId, emitter);
-        replayMissedNotifications(userId, lastEventIdHeader, emitter);
+        sendInitialMissionStateOrConnectEvent(userId, emitter);
 
         return emitter;
     }
@@ -90,35 +99,76 @@ public class NotificationService {
         }
     }
 
-    private void replayMissedNotifications(Long userId, String lastEventIdHeader, SseEmitter emitter) {
-        Long lastEventId = parseLastEventId(lastEventIdHeader);
+    private void sendInitialMissionStateOrConnectEvent(Long userId, SseEmitter emitter) {
+        missionRepository.findFirstByUserIdAndMissionStatusInOrderByIdDesc(userId, ACTIVE_MISSION_STATUSES)
+                .ifPresentOrElse(
+                        mission -> sendCurrentMissionStateEvent(userId, emitter, mission),
+                        () -> sendConnectEvent(userId, emitter)
+                );
+    }
 
-        if (lastEventId == null) {
-            return;
-        }
+    private void sendCurrentMissionStateEvent(Long userId, SseEmitter emitter, Mission mission) {
+        NotificationPayload payload = createCurrentMissionStatePayload(mission);
 
-        List<Notification> missedNotifications =
-                notificationRepository.findByUserIdAndIdGreaterThanOrderByIdAsc(userId, lastEventId);
-
-        log.info("밀린 알림 재전송 시작: userId = {}, lastEventId = {}, missedCount = {}",
-                userId, lastEventId, missedNotifications.size());
-
-        for (Notification notification : missedNotifications) {
-            sendNotificationEvent(userId, emitter, notification);
+        try {
+            log.info("현재 활성 미션 상태 동기화 전송: userId = {}, missionId = {}, eventType = {}",
+                    userId, payload.missionId(), payload.eventType());
+            emitter.send(SseEmitter.event()
+                    .name(payload.eventType())
+                    .data(payload));
+        } catch (IOException exception) {
+            log.error("현재 활성 미션 상태 동기화 전송 실패: userId = {}, missionId = {}",
+                    userId, mission.getId(), exception);
+            notificationEmitterRepository.delete(userId, emitter);
+            emitter.completeWithError(exception);
         }
     }
 
-    private Long parseLastEventId(String lastEventIdHeader) {
-        if (!StringUtils.hasText(lastEventIdHeader)) {
-            return null;
-        }
-
-        try {
-            return Long.parseLong(lastEventIdHeader);
-        } catch (NumberFormatException exception) {
-            log.warn("잘못된 Last-Event-ID 헤더를 무시합니다: value = {}", lastEventIdHeader);
-            return null;
-        }
+    private NotificationPayload createCurrentMissionStatePayload(Mission mission) {
+        return switch (mission.getMissionStatus()) {
+            case CREATED -> NotificationPayload.of(
+                    "MISSION_CREATED",
+                    mission.getId(),
+                    mission.getUser().getId(),
+                    "미션 생성 요청이 접수되었습니다."
+            );
+            case ASSIGNED -> NotificationPayload.of(
+                    "ROBOT_ASSIGNED",
+                    mission.getId(),
+                    mission.getUser().getId(),
+                    "로봇 배정이 완료되었습니다."
+            );
+            case DISPATCHED -> NotificationPayload.of(
+                    "MISSION_STARTED",
+                    mission.getId(),
+                    mission.getUser().getId(),
+                    "로봇이 출발했습니다."
+            );
+            case ARRIVED -> NotificationPayload.of(
+                    "MISSION_ARRIVED",
+                    mission.getId(),
+                    mission.getUser().getId(),
+                    "로봇이 목적지에 도착했습니다."
+            );
+            case RETURNING -> NotificationPayload.of(
+                    "MISSION_RETURN_STARTED",
+                    mission.getId(),
+                    mission.getUser().getId(),
+                    "로봇이 복귀를 시작했습니다."
+            );
+            case FINISHED -> NotificationPayload.of(
+                    "MISSION_FINISHED",
+                    mission.getId(),
+                    mission.getUser().getId(),
+                    "미션이 완료되었습니다."
+            );
+            case FAILED -> NotificationPayload.failure(
+                    mission.getId(),
+                    mission.getUser().getId(),
+                    "미션 수행 중 오류가 발생했습니다.",
+                    null
+            );
+        };
     }
 
     private void sendNotificationEvent(Long userId, SseEmitter emitter, Notification notification) {

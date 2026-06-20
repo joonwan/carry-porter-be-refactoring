@@ -3,11 +3,15 @@ package com.e101.carry_porter.domain.notification.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 
+import com.e101.carry_porter.domain.mission.entity.Mission;
+import com.e101.carry_porter.domain.mission.repository.MissionRepository;
 import com.e101.carry_porter.domain.notification.dto.NotificationPayload;
 import com.e101.carry_porter.domain.notification.entity.Notification;
 import com.e101.carry_porter.domain.notification.event.NotificationCreatedEvent;
 import com.e101.carry_porter.domain.notification.repository.NotificationEmitterRepository;
 import com.e101.carry_porter.domain.notification.repository.NotificationRepository;
+import com.e101.carry_porter.domain.user.entity.User;
+import com.e101.carry_porter.domain.user.repository.UserRepository;
 import com.e101.carry_porter.support.TransactionalIntegrationTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,6 +31,12 @@ class NotificationServiceTest extends TransactionalIntegrationTestSupport {
     private NotificationRepository notificationRepository;
 
     @Autowired
+    private MissionRepository missionRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private ApplicationEvents events;
 
     @Test
@@ -36,7 +46,7 @@ class NotificationServiceTest extends TransactionalIntegrationTestSupport {
         Long userId = 1L;
 
         // when
-        SseEmitter emitter = notificationService.createConnection(userId, null);
+        SseEmitter emitter = notificationService.createConnection(userId);
 
         // then
         assertThat(emitter).isNotNull();
@@ -48,10 +58,10 @@ class NotificationServiceTest extends TransactionalIntegrationTestSupport {
     void createConnectionWithExistingEmitter() {
         // given
         Long userId = 1L;
-        SseEmitter firstEmitter = notificationService.createConnection(userId, null);
+        SseEmitter firstEmitter = notificationService.createConnection(userId);
 
         // when
-        SseEmitter secondEmitter = notificationService.createConnection(userId, null);
+        SseEmitter secondEmitter = notificationService.createConnection(userId);
 
         // then
         assertThat(secondEmitter).isNotNull();
@@ -108,32 +118,17 @@ class NotificationServiceTest extends TransactionalIntegrationTestSupport {
     }
 
     @Test
-    @DisplayName("Last-Event-ID가 있으면 해당 id 이후의 밀린 알림을 재전송할 수 있도록 새 emitter를 연결한다")
-    void createConnectionWithLastEventId() {
+    @DisplayName("종료되지 않은 미션이 있으면 SSE 구독 시 현재 활성 미션 상태를 동기화할 수 있도록 emitter를 연결한다")
+    void createConnectionWithActiveMission() {
         // given
-        Long userId = 1L;
-        Notification firstNotification = notificationRepository.save(
-                Notification.create(NotificationPayload.of(
-                        "ROBOT_ASSIGNED",
-                        11L,
-                        userId,
-                        "로봇 배정이 완료되었습니다."
-                ))
-        );
-        notificationRepository.save(
-                Notification.create(NotificationPayload.of(
-                        "MISSION_STARTED",
-                        11L,
-                        userId,
-                        "로봇이 출발했습니다."
-                ))
-        );
+        User user = userRepository.save(User.createUser("active-user", "password1234"));
+        missionRepository.save(Mission.createMission(user));
 
         // when
-        SseEmitter emitter = notificationService.createConnection(userId, String.valueOf(firstNotification.getId()));
+        SseEmitter emitter = notificationService.createConnection(user.getId());
 
         // then
         assertThat(emitter).isNotNull();
-        assertThat(notificationEmitterRepository.findByUserId(userId)).contains(emitter);
+        assertThat(notificationEmitterRepository.findByUserId(user.getId())).contains(emitter);
     }
 }

@@ -2,11 +2,11 @@ package com.e101.carry_porter.domain.notification.controller;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.mockito.BDDMockito.then;
 
 import com.e101.carry_porter.domain.notification.service.NotificationService;
 import com.e101.carry_porter.global.security.AuthenticatedUser;
@@ -37,7 +37,7 @@ class NotificationControllerTest extends RestControllerTestSupport {
         );
         SseEmitter emitter = new SseEmitter();
 
-        given(notificationService.createConnection(eq(1L), eq(null))).willReturn(emitter);
+        given(notificationService.createConnection(eq(1L))).willReturn(emitter);
 
         // when & then
         mockMvc.perform(get("/api/notifications/subscribe")
@@ -45,30 +45,6 @@ class NotificationControllerTest extends RestControllerTestSupport {
                 .andExpect(status().isOk())
                 .andExpect(request().asyncStarted());
 
-        then(notificationService).should().createConnection(1L, null);
-    }
-
-    @Test
-    @DisplayName("Last-Event-ID 헤더가 있으면 구독 시 함께 전달한다")
-    void subscribeWithLastEventId() throws Exception {
-        // given
-        AuthenticatedUser authenticatedUser = new AuthenticatedUser(1L, "notification-user");
-        UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
-                authenticatedUser,
-                null,
-                List.of()
-        );
-        SseEmitter emitter = new SseEmitter();
-
-        given(notificationService.createConnection(eq(1L), eq("15"))).willReturn(emitter);
-
-        // when & then
-        mockMvc.perform(get("/api/notifications/subscribe")
-                        .header("Last-Event-ID", "15")
-                        .with(authentication(authenticationToken)))
-                .andExpect(status().isOk())
-                .andExpect(request().asyncStarted());
-
-        then(notificationService).should().createConnection(1L, "15");
+        then(notificationService).should().createConnection(1L);
     }
 }
