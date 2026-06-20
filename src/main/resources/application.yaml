@@ -7,6 +7,11 @@ spring:
     url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:carry_porter}
     username: ${DB_USERNAME:root}
     password: ${DB_PASSWORD:1234}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}      # Redis 서버 host. 로컬은 localhost, docker compose 환경에서는 redis service name 사용.
+      port: ${REDIS_PORT:6379}           # Redis 서버 port.
+      timeout: ${REDIS_TIMEOUT:2000ms}   # Redis 명령 처리 대기 시간.
   jpa:
     hibernate:
       ddl-auto: ${JPA_DDL_AUTO:create}
