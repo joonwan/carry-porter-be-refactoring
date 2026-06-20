@@ -4,7 +4,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.e101.carry_porter.domain.notification.event.NotificationCreatedEvent;
-import com.e101.carry_porter.domain.notification.service.NotificationService;
+import com.e101.carry_porter.domain.notification.redis.NotificationRedisPublisher;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,13 +16,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class NotificationDispatchEventListenerTest {
 
     @Mock
-    private NotificationService notificationService;
+    private NotificationRedisPublisher notificationRedisPublisher;
 
     @InjectMocks
     private NotificationDispatchEventListener notificationDispatchEventListener;
 
     @Test
-    @DisplayName("NotificationCreatedEvent를 수신하면 notificationService.dispatch()를 한 번 호출한다")
+    @DisplayName("NotificationCreatedEvent를 수신하면 notificationRedisPublisher.publish()를 한 번 호출한다")
     void handleNotificationCreatedEvent() {
         // given
         NotificationCreatedEvent event = new NotificationCreatedEvent(1L, 2L);
@@ -31,6 +31,6 @@ class NotificationDispatchEventListenerTest {
         notificationDispatchEventListener.handleNotificationCreatedEvent(event);
 
         // then
-        verify(notificationService, times(1)).dispatch(1L);
+        verify(notificationRedisPublisher, times(1)).publish(1L, 2L);
     }
 }
