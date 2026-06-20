@@ -10,6 +10,8 @@ infra/mosquitto/data/*
 !infra/mosquitto/data/.gitkeep
 infra/mosquitto/log/*
 !infra/mosquitto/log/.gitkeep
+infra/mysql/data/*
+!infra/mysql/data/.gitkeep
 clients/**/__pycache__/
 frontend/node_modules/
 frontend/dist/

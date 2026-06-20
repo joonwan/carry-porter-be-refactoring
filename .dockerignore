@@ -1,0 +1,13 @@
+.git
+.gradle
+.idea
+build
+out
+frontend/node_modules
+frontend/dist
+clients/**/__pycache__
+infra/mosquitto/data
+infra/mosquitto/log
+docs
+*.iml
+.DS_Store
