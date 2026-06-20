@@ -2,9 +2,12 @@ package com.e101.carry_porter.domain.notification.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.e101.carry_porter.domain.notification.dto.NotificationPayload;
+import com.e101.carry_porter.domain.mission.entity.Mission;
+import com.e101.carry_porter.domain.mission.repository.MissionRepository;
 import com.e101.carry_porter.domain.notification.entity.Notification;
 import com.e101.carry_porter.domain.notification.repository.NotificationRepository;
+import com.e101.carry_porter.domain.user.entity.User;
+import com.e101.carry_porter.domain.user.repository.UserRepository;
 import com.e101.carry_porter.support.TransactionalIntegrationTestSupport;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
@@ -22,27 +25,38 @@ class NotificationCleanupServiceTest extends TransactionalIntegrationTestSupport
     private NotificationRepository notificationRepository;
 
     @Autowired
+    private MissionRepository missionRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @Test
     @DisplayName("기준 시각보다 오래된 알림만 삭제한다")
     void deleteNotificationsCreatedBefore() {
         // given
+        User user = userRepository.save(User.createUser("notification-cleanup-user", "password1234"));
+        Mission expiredMission = missionRepository.save(Mission.createMission(user));
+        Mission recentMission = missionRepository.save(Mission.createMission(user));
         Notification expiredNotification = notificationRepository.saveAndFlush(
-                Notification.create(NotificationPayload.of(
+                Notification.create(
+                        user,
+                        expiredMission,
                         "MISSION_STARTED",
-                        1L,
-                        1L,
-                        "오래된 알림입니다."
-                ))
+                        "오래된 알림입니다.",
+                        null
+                )
         );
         Notification recentNotification = notificationRepository.saveAndFlush(
-                Notification.create(NotificationPayload.of(
+                Notification.create(
+                        user,
+                        recentMission,
                         "MISSION_FINISHED",
-                        2L,
-                        1L,
-                        "최근 알림입니다."
-                ))
+                        "최근 알림입니다.",
+                        null
+                )
         );
 
         LocalDateTime now = LocalDateTime.now();

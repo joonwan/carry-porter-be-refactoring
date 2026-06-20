@@ -2,12 +2,18 @@ package com.e101.carry_porter.domain.notification.service;
 
 import com.e101.carry_porter.domain.mission.entity.Mission;
 import com.e101.carry_porter.domain.mission.entity.MissionStatus;
+import com.e101.carry_porter.domain.mission.exception.MissionErrorCode;
+import com.e101.carry_porter.domain.mission.exception.MissionException;
 import com.e101.carry_porter.domain.mission.repository.MissionRepository;
 import com.e101.carry_porter.domain.notification.dto.NotificationPayload;
 import com.e101.carry_porter.domain.notification.entity.Notification;
 import com.e101.carry_porter.domain.notification.event.NotificationCreatedEvent;
 import com.e101.carry_porter.domain.notification.repository.NotificationEmitterRepository;
 import com.e101.carry_porter.domain.notification.repository.NotificationRepository;
+import com.e101.carry_porter.domain.user.entity.User;
+import com.e101.carry_porter.domain.user.exception.UserErrorCode;
+import com.e101.carry_porter.domain.user.exception.UserException;
+import com.e101.carry_porter.domain.user.repository.UserRepository;
 import java.io.IOException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +43,7 @@ public class NotificationService {
     private final NotificationEmitterRepository notificationEmitterRepository;
     private final NotificationRepository notificationRepository;
     private final MissionRepository missionRepository;
+    private final UserRepository userRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     public SseEmitter createConnection(Long userId) {
@@ -55,7 +62,17 @@ public class NotificationService {
 
     @Transactional
     public void createNotification(NotificationPayload payload) {
-        Notification notification = notificationRepository.save(Notification.create(payload));
+        User user = userRepository.findById(payload.userId())
+                .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+        Mission mission = findMissionOrNull(payload.missionId());
+
+        Notification notification = notificationRepository.save(Notification.create(
+                user,
+                mission,
+                payload.eventType(),
+                payload.message(),
+                payload.failureCode()
+        ));
 
         log.info("알림 저장 완료: notificationId = {}, userId = {}, eventType = {}",
                 notification.getId(), notification.getUserId(), notification.getEventType());
@@ -169,6 +186,15 @@ public class NotificationService {
                     null
             );
         };
+    }
+
+    private Mission findMissionOrNull(Long missionId) {
+        if (missionId == null) {
+            return null;
+        }
+
+        return missionRepository.findById(missionId)
+                .orElseThrow(() -> new MissionException(MissionErrorCode.MISSION_NOT_FOUND));
     }
 
     private void sendNotificationEvent(Long userId, SseEmitter emitter, Notification notification) {

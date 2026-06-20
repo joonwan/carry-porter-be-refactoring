@@ -1,13 +1,16 @@
 package com.e101.carry_porter.domain.notification.entity;
 
-import com.e101.carry_porter.domain.notification.dto.NotificationPayload;
+import com.e101.carry_porter.domain.mission.entity.Mission;
+import com.e101.carry_porter.domain.user.entity.User;
 import com.e101.carry_porter.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -16,12 +19,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
-@Table(
-        name = "notifications",
-        indexes = {
-                @Index(name = "idx_notifications_user_id_id", columnList = "user_id, notification_id")
-        }
-)
+@Table(name = "notifications")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Notification extends BaseEntity {
 
@@ -30,13 +28,16 @@ public class Notification extends BaseEntity {
     @Column(name = "notification_id")
     private Long id;
 
-    @Column(name = "user_id", nullable = false)
-    private Long userId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
     @Column(nullable = false, length = 50)
     private String eventType;
 
-    private Long missionId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "mission_id")
+    private Mission mission;
 
     @Column(nullable = false, length = 255)
     private String message;
@@ -44,22 +45,40 @@ public class Notification extends BaseEntity {
     @Column(length = 100)
     private String failureCode;
 
-    public static Notification create(NotificationPayload payload) {
+    public static Notification create(
+            User user,
+            Mission mission,
+            String eventType,
+            String message,
+            String failureCode
+    ) {
         return Notification.builder()
-                .userId(payload.userId())
-                .eventType(payload.eventType())
-                .missionId(payload.missionId())
-                .message(payload.message())
-                .failureCode(payload.failureCode())
+                .user(user)
+                .mission(mission)
+                .eventType(eventType)
+                .message(message)
+                .failureCode(failureCode)
                 .build();
     }
 
     @Builder
-    private Notification(Long userId, String eventType, Long missionId, String message, String failureCode) {
-        this.userId = userId;
+    private Notification(User user, Mission mission, String eventType, String message, String failureCode) {
+        this.user = user;
         this.eventType = eventType;
-        this.missionId = missionId;
+        this.mission = mission;
         this.message = message;
         this.failureCode = failureCode;
+    }
+
+    public Long getUserId() {
+        return user.getId();
+    }
+
+    public Long getMissionId() {
+        if (mission == null) {
+            return null;
+        }
+
+        return mission.getId();
     }
 }

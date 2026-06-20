@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.e101.carry_porter.domain.mission.entity.Mission;
 import com.e101.carry_porter.domain.mission.repository.MissionRepository;
+import com.e101.carry_porter.domain.notification.repository.NotificationRepository;
 import com.e101.carry_porter.domain.robot.entity.Robot;
 import com.e101.carry_porter.domain.robot.repository.RobotRepository;
 import com.e101.carry_porter.domain.robot.service.dto.request.AssignRobotServiceRequest;
@@ -46,6 +47,9 @@ class RobotServiceConcurrencyTest extends IntegrationTestSupport {
     private MissionRepository missionRepository;
 
     @Autowired
+    private NotificationRepository notificationRepository;
+
+    @Autowired
     private UserRepository userRepository;
 
     private TestFixture fixture;
@@ -78,6 +82,7 @@ class RobotServiceConcurrencyTest extends IntegrationTestSupport {
 
     @AfterEach
     void tearDown() {
+        notificationRepository.deleteAllInBatch();
         missionRepository.deleteAllInBatch();
         robotRepository.deleteAllInBatch();
         userRepository.deleteAllInBatch();

@@ -73,11 +73,12 @@ class NotificationServiceTest extends TransactionalIntegrationTestSupport {
     @DisplayName("알림을 생성하면 DB에 저장하고 NotificationCreatedEvent를 발행한다")
     void createNotification() {
         // given
-        Long userId = 1L;
+        User user = userRepository.save(User.createUser("notification-user", "password1234"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
         NotificationPayload payload = NotificationPayload.of(
                 "MISSION_STARTED",
-                10L,
-                userId,
+                mission.getId(),
+                user.getId(),
                 "로봇이 출발했습니다."
         );
 
@@ -88,28 +89,33 @@ class NotificationServiceTest extends TransactionalIntegrationTestSupport {
         assertThat(notificationRepository.findAll()).hasSize(1);
 
         Notification notification = notificationRepository.findAll().getFirst();
-        assertThat(notification.getUserId()).isEqualTo(userId);
-        assertThat(notification.getMissionId()).isEqualTo(10L);
+        assertThat(notification.getUser()).isEqualTo(user);
+        assertThat(notification.getMission()).isEqualTo(mission);
+        assertThat(notification.getUserId()).isEqualTo(user.getId());
+        assertThat(notification.getMissionId()).isEqualTo(mission.getId());
         assertThat(notification.getEventType()).isEqualTo("MISSION_STARTED");
         assertThat(notification.getMessage()).isEqualTo("로봇이 출발했습니다.");
         assertThat(events.stream(NotificationCreatedEvent.class)).hasSize(1);
         assertThat(events.stream(NotificationCreatedEvent.class).findFirst()).isPresent()
                 .get()
                 .extracting(NotificationCreatedEvent::notificationId, NotificationCreatedEvent::userId)
-                .containsExactly(notification.getId(), userId);
+                .containsExactly(notification.getId(), user.getId());
     }
 
     @Test
     @DisplayName("활성화된 SSE 연결이 없어도 dispatch 호출 시 예외 없이 종료된다")
     void dispatchWithoutEmitter() {
         // given
+        User user = userRepository.save(User.createUser("notification-dispatch-user", "password1234"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
         Notification notification = notificationRepository.save(
-                Notification.create(NotificationPayload.of(
+                Notification.create(
+                        user,
+                        mission,
                         "MISSION_STARTED",
-                        10L,
-                        1L,
-                        "로봇이 출발했습니다."
-                ))
+                        "로봇이 출발했습니다.",
+                        null
+                )
         );
 
         // when & then
