@@ -40,7 +40,7 @@ carry-porter:
     password: ${MQTT_PASSWORD:}                                  # MQTT Broker 인증용 비밀번호. 로컬 개발에서는 비워둘 수 있음.
     completion-timeout: ${MQTT_COMPLETION_TIMEOUT:5000}          # MQTT 송수신 완료를 기다리는 최대 시간(ms).
     inbound:
-      topic: ${MQTT_INBOUND_TOPIC:v1/robots/+/event/#}           # 서버가 구독할 로봇 이벤트 topic 패턴.
+      topic: ${MQTT_INBOUND_TOPIC:$share/carry-porter/v1/robots/+/event/#} # shared subscription 으로 동일 로봇 이벤트를 여러 인스턴스 중 하나만 소비하도록 하는 topic 패턴.
       qos: ${MQTT_INBOUND_QOS:1}                                 # inbound 메시지 수신 시 사용할 QoS.
     outbound:
       default-topic: ${MQTT_OUTBOUND_DEFAULT_TOPIC:v1/robots/unknown/command/departure} # 기본 publish topic. 실제 전송 시 header로 덮어쓴다.

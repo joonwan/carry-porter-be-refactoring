@@ -90,7 +90,7 @@ services:
       MQTT_BROKER_URL: tcp://mosquitto:1883
       MQTT_CLIENT_ID: carry-porter-server-app-1
       MQTT_COMPLETION_TIMEOUT: ${MQTT_COMPLETION_TIMEOUT:-5000}
-      MQTT_INBOUND_TOPIC: ${MQTT_INBOUND_TOPIC:-v1/robots/+/event/#}
+      MQTT_INBOUND_TOPIC: ${MQTT_INBOUND_TOPIC:-$$share/carry-porter/v1/robots/+/event/#}
       MQTT_INBOUND_QOS: ${MQTT_INBOUND_QOS:-1}
       MQTT_OUTBOUND_DEFAULT_TOPIC: ${MQTT_OUTBOUND_DEFAULT_TOPIC:-v1/robots/unknown/command/departure}
       MQTT_OUTBOUND_QOS: ${MQTT_OUTBOUND_QOS:-1}
@@ -131,7 +131,7 @@ services:
       MQTT_BROKER_URL: tcp://mosquitto:1883
       MQTT_CLIENT_ID: carry-porter-server-app-2
       MQTT_COMPLETION_TIMEOUT: ${MQTT_COMPLETION_TIMEOUT:-5000}
-      MQTT_INBOUND_TOPIC: ${MQTT_INBOUND_TOPIC:-v1/robots/+/event/#}
+      MQTT_INBOUND_TOPIC: ${MQTT_INBOUND_TOPIC:-$$share/carry-porter/v1/robots/+/event/#}
       MQTT_INBOUND_QOS: ${MQTT_INBOUND_QOS:-1}
       MQTT_OUTBOUND_DEFAULT_TOPIC: ${MQTT_OUTBOUND_DEFAULT_TOPIC:-v1/robots/unknown/command/departure}
       MQTT_OUTBOUND_QOS: ${MQTT_OUTBOUND_QOS:-1}
