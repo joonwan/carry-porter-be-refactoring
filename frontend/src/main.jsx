@@ -43,6 +43,8 @@ function App() {
   const [events, setEvents] = useState([]);
   const [sseStatus, setSseStatus] = useState("DISCONNECTED");
   const [errorMessage, setErrorMessage] = useState("");
+  const [showCompletionNotice, setShowCompletionNotice] = useState(false);
+  const [showSignupSuccess, setShowSignupSuccess] = useState(false);
   const abortControllerRef = useRef(null);
 
   const isLoggedIn = Boolean(token);
@@ -94,12 +96,12 @@ function App() {
       headers: {},
     });
 
-    setView("login");
-    setErrorMessage("회원가입이 완료되었습니다. 로그인해 주세요.");
+    setShowSignupSuccess(true);
   }
 
   async function handleLogin(form) {
     setErrorMessage("");
+    setShowSignupSuccess(false);
 
     const body = await request("/auth/login", {
       method: "POST",
@@ -121,6 +123,7 @@ function App() {
 
   async function createMission() {
     setErrorMessage("");
+    setShowCompletionNotice(false);
 
     const body = await request("/missions", {
       method: "POST",
@@ -175,8 +178,25 @@ function App() {
       setMissionStatus("READY");
       setEvents([]);
       setSseStatus("DISCONNECTED");
+      setShowCompletionNotice(false);
       setView("login");
     }
+  }
+
+  function reconnectAfterCompletion() {
+    setShowCompletionNotice(false);
+
+    if (!token) {
+      return;
+    }
+
+    connectSse(token);
+  }
+
+  function confirmSignupSuccess() {
+    setShowSignupSuccess(false);
+    setErrorMessage("");
+    setView("login");
   }
 
   async function connectSse(accessToken) {
@@ -259,6 +279,10 @@ function App() {
         setMissionStatus(payload.eventType);
       }
 
+      if (payload.eventType === "MISSION_FINISHED") {
+        setShowCompletionNotice(true);
+      }
+
       if (payload.missionId) {
         const nextMissionId = String(payload.missionId);
         localStorage.setItem("missionId", nextMissionId);
@@ -287,12 +311,12 @@ function App() {
     <main className="app-shell">
       <section className="brand-panel">
         <div className="brand-mark">
-          <Radio size={26} />
+          <img className="brand-logo" src="/images/logo.png" alt="Carry Porter" />
         </div>
-        <p className="eyebrow">Carry Porter Control</p>
-        <h1>로봇 호출 흐름을 한 화면에서 확인합니다.</h1>
+        <p className="eyebrow">Carry Porter Control Tower</p>
+        <h1>CarryPorter MissionFlow Live</h1>
         <p className="brand-copy">
-          회원가입, 로그인, 미션 생성, 복귀 명령, SSE 상태 수신까지 refactoring 서버 흐름을 그대로 연결했습니다.
+          사용자 호출부터 로봇 배정, 출발, 도착, 복귀, 완료까지 refactoring 서버의 이벤트 흐름을 실시간으로 확인합니다.
         </p>
         <div className="signal-row">
           <span className={`signal-dot ${sseStatus.toLowerCase()}`} />
@@ -310,6 +334,7 @@ function App() {
           onSubmit={handleLogin}
           onSwitch={() => {
             setErrorMessage("");
+            setShowSignupSuccess(false);
             setView("signup");
           }}
         />
@@ -322,9 +347,12 @@ function App() {
           icon={<UserPlus size={18} />}
           buttonText="회원가입"
           errorMessage={errorMessage}
+          showSignupSuccess={showSignupSuccess}
+          onConfirmSignupSuccess={confirmSignupSuccess}
           onSubmit={handleSignup}
           onSwitch={() => {
             setErrorMessage("");
+            setShowSignupSuccess(false);
             setView("login");
           }}
         />
@@ -342,13 +370,25 @@ function App() {
           onCreateMission={createMission}
           onReturnRobot={returnRobot}
           onLogout={logout}
+          showCompletionNotice={showCompletionNotice}
+          onConfirmCompletion={reconnectAfterCompletion}
         />
       )}
     </main>
   );
 }
 
-function AuthPanel({ mode, title, icon, buttonText, errorMessage, onSubmit, onSwitch }) {
+function AuthPanel({
+  mode,
+  title,
+  icon,
+  buttonText,
+  errorMessage,
+  showSignupSuccess,
+  onConfirmSignupSuccess,
+  onSubmit,
+  onSwitch,
+}) {
   const [form, setForm] = useState({ username: "", password: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [localMessage, setLocalMessage] = useState("");
@@ -374,6 +414,19 @@ function AuthPanel({ mode, title, icon, buttonText, errorMessage, onSubmit, onSw
         <span className="panel-icon">{icon}</span>
         <h2>{title}</h2>
       </div>
+
+      {showSignupSuccess && (
+        <section className="auth-success-notice" aria-live="polite">
+          <div>
+            <span className="completion-kicker">Signup Complete</span>
+            <strong>회원가입이 완료되었습니다.</strong>
+            <p>확인을 누르면 로그인 화면으로 이동합니다.</p>
+          </div>
+          <button className="notice-button" type="button" onClick={onConfirmSignupSuccess}>
+            확인
+          </button>
+        </section>
+      )}
 
       <form onSubmit={submit} className="auth-form">
         <label>
@@ -425,6 +478,8 @@ function Dashboard({
   onCreateMission,
   onReturnRobot,
   onLogout,
+  showCompletionNotice,
+  onConfirmCompletion,
 }) {
   const isReturnEnabled = missionStatus === "MISSION_ARRIVED";
 
@@ -432,7 +487,7 @@ function Dashboard({
     <section className="dashboard">
       <header className="dashboard-header">
         <div>
-          <p className="eyebrow">Operator</p>
+          <p className="eyebrow">Operator Console</p>
           <h2>{username}</h2>
           <p className="token-copy">Token expires at {expiresAt || "-"}</p>
         </div>
@@ -470,6 +525,19 @@ function Dashboard({
         </p>
       )}
 
+      {showCompletionNotice && (
+        <section className="completion-notice" aria-live="polite">
+          <div>
+            <span className="completion-kicker">Mission Complete</span>
+            <strong>미션이 정상 종료되었습니다.</strong>
+            <p>확인하면 SSE 연결을 다시 동기화해서 다음 호출을 준비합니다.</p>
+          </div>
+          <button className="notice-button" type="button" onClick={onConfirmCompletion}>
+            확인
+          </button>
+        </section>
+      )}
+
       <ol className="step-list">
         {missionSteps.map((step, index) => (
           <li
@@ -490,7 +558,7 @@ function Dashboard({
           <span className="panel-icon">
             <Radio size={17} />
           </span>
-          <h3>실시간 미션 이벤트</h3>
+          <h3>Live Mission Feed</h3>
         </div>
 
         <div className="event-list">
