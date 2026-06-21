@@ -2,6 +2,7 @@ package com.e101.carry_porter.domain.robot.service;
 
 import com.e101.carry_porter.domain.mission.entity.Mission;
 import com.e101.carry_porter.domain.mission.entity.MissionStatus;
+import com.e101.carry_porter.domain.mission.event.MissionFailedEvent;
 import com.e101.carry_porter.domain.mission.exception.MissionErrorCode;
 import com.e101.carry_porter.domain.mission.exception.MissionException;
 import com.e101.carry_porter.domain.mission.repository.MissionRepository;
@@ -14,6 +15,7 @@ import com.e101.carry_porter.domain.robot.exception.RobotException;
 import com.e101.carry_porter.domain.robot.repository.RobotRepository;
 import com.e101.carry_porter.domain.robot.service.dto.request.AssignRobotServiceRequest;
 import com.e101.carry_porter.domain.robot.service.dto.response.AssignRobotServiceResponse;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -25,6 +27,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 @RequiredArgsConstructor
 public class RobotService {
+
+    private static final List<MissionStatus> ROBOT_ACTIVE_MISSION_STATUSES = List.of(
+            MissionStatus.ASSIGNED,
+            MissionStatus.DISPATCHED,
+            MissionStatus.ARRIVED,
+            MissionStatus.RETURNING
+    );
 
     private final RobotRepository robotRepository;
     private final MissionRepository missionRepository;
@@ -55,6 +64,7 @@ public class RobotService {
         RobotStatus previousStatus = robot.getRobotStatus();
         robot.toOffline();
         robotEventDedupService.markProcessedRobotEvent(robotEventId, macAddress);
+        failActiveMissionByDisconnectedRobot(robot);
 
         log.info("robot 상태가 OFFLINE 으로 변경되었습니다: robotId = {}, macAddress = {}, previousStatus = {}, currentStatus = {}",
                 robot.getId(), robot.getMacAddress(), previousStatus, robot.getRobotStatus());
@@ -115,6 +125,28 @@ public class RobotService {
 
         log.warn("RobotAssignmentFailedEvent 발행: missionId = {}, userId = {}, failureCode = {}",
                 mission.getId(), mission.getUser().getId(), errorCode.getCode());
+    }
+
+    private void failActiveMissionByDisconnectedRobot(Robot robot) {
+        missionRepository.findFirstByRobotIdAndMissionStatusInOrderByIdDesc(
+                        robot.getId(),
+                        ROBOT_ACTIVE_MISSION_STATUSES
+                )
+                .ifPresent(mission -> {
+                    mission.fail();
+
+                    eventPublisher.publishEvent(new MissionFailedEvent(
+                            mission.getId(),
+                            robot.getMacAddress(),
+                            mission.getUser().getId(),
+                            RobotErrorCode.ROBOT_DISCONNECTED.getCode(),
+                            RobotErrorCode.ROBOT_DISCONNECTED.getMessage()
+                    ));
+
+                    log.warn("로봇 연결 끊김으로 미션 실패 처리: missionId = {}, robotId = {}, userId = {}, failureCode = {}",
+                            mission.getId(), robot.getId(), mission.getUser().getId(),
+                            RobotErrorCode.ROBOT_DISCONNECTED.getCode());
+                });
     }
 
     private Robot synchronizeRobotStatus(Robot robot) {

@@ -14,4 +14,9 @@ public interface MissionRepository extends JpaRepository<Mission, Long> {
             Long userId,
             Collection<MissionStatus> missionStatuses
     );
+
+    Optional<Mission> findFirstByRobotIdAndMissionStatusInOrderByIdDesc(
+            Long robotId,
+            Collection<MissionStatus> missionStatuses
+    );
 }

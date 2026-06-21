@@ -1,5 +1,6 @@
 package com.e101.carry_porter.domain.notification.listener;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -121,7 +122,7 @@ class NotificationEventListenerTest {
         // then
         ArgumentCaptor<NotificationPayload> payloadCaptor = ArgumentCaptor.forClass(NotificationPayload.class);
         verify(notificationService, times(1)).createNotification(payloadCaptor.capture());
-        verifyNotificationPayload(payloadCaptor.getValue(), "MISSION_FAILED", 1L, 3L, "미션 수행 중 오류가 발생했습니다.", "ROBOT_EMERGENCY");
+        verifyNotificationPayload(payloadCaptor.getValue(), "MISSION_FAILED", 1L, 3L, "obstacle detected", "ROBOT_EMERGENCY");
     }
 
     private void verifyNotificationPayload(
@@ -132,10 +133,10 @@ class NotificationEventListenerTest {
             String message,
             String failureCode
     ) {
-        org.assertj.core.api.Assertions.assertThat(payload.eventType()).isEqualTo(eventType);
-        org.assertj.core.api.Assertions.assertThat(payload.missionId()).isEqualTo(missionId);
-        org.assertj.core.api.Assertions.assertThat(payload.userId()).isEqualTo(userId);
-        org.assertj.core.api.Assertions.assertThat(payload.message()).isEqualTo(message);
-        org.assertj.core.api.Assertions.assertThat(payload.failureCode()).isEqualTo(failureCode);
+        assertThat(payload.eventType()).isEqualTo(eventType);
+        assertThat(payload.missionId()).isEqualTo(missionId);
+        assertThat(payload.userId()).isEqualTo(userId);
+        assertThat(payload.message()).isEqualTo(message);
+        assertThat(payload.failureCode()).isEqualTo(failureCode);
     }
 }

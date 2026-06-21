@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e101.carry_porter.domain.mission.entity.Mission;
 import com.e101.carry_porter.domain.mission.entity.MissionStatus;
+import com.e101.carry_porter.domain.mission.event.MissionFailedEvent;
 import com.e101.carry_porter.domain.mission.exception.MissionErrorCode;
 import com.e101.carry_porter.domain.mission.exception.MissionException;
 import com.e101.carry_porter.domain.mission.repository.MissionRepository;
@@ -151,6 +152,46 @@ class RobotServiceTest extends TransactionalIntegrationTestSupport {
         Robot disconnectedRobot = robotRepository.findByMacAddress(robot.getMacAddress()).orElseThrow();
 
         assertThat(disconnectedRobot.getRobotStatus()).isEqualTo(RobotStatus.OFFLINE);
+    }
+
+    @Test
+    @DisplayName("진행 중인 미션의 로봇 연결이 끊기면 미션을 FAILED로 변경하고 MissionFailedEvent를 발행한다")
+    void disconnectWithActiveMission() {
+        // given
+        String robotEventId = "robot-event-disconnect-3";
+        User user = userRepository.save(User.createUser("disconnect-user", "password"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:16"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+
+        // when
+        robotService.disconnect(robotEventId, robot.getMacAddress());
+
+        // then
+        Mission failedMission = missionRepository.findById(mission.getId()).orElseThrow();
+        Robot disconnectedRobot = robotRepository.findByMacAddress(robot.getMacAddress()).orElseThrow();
+
+        assertThat(failedMission.getMissionStatus()).isEqualTo(MissionStatus.FAILED);
+        assertThat(disconnectedRobot.getRobotStatus()).isEqualTo(RobotStatus.OFFLINE);
+        assertThat(processedRobotEventRepository.existsByRobotEventId(robotEventId)).isTrue();
+        assertThat(events.stream(MissionFailedEvent.class)).hasSize(1);
+        assertThat(events.stream(MissionFailedEvent.class).findFirst()).isPresent()
+                .get()
+                .extracting(
+                        MissionFailedEvent::missionId,
+                        MissionFailedEvent::robotMacAddress,
+                        MissionFailedEvent::userId,
+                        MissionFailedEvent::failureCode,
+                        MissionFailedEvent::message
+                )
+                .containsExactly(
+                        mission.getId(),
+                        robot.getMacAddress(),
+                        user.getId(),
+                        RobotErrorCode.ROBOT_DISCONNECTED.getCode(),
+                        RobotErrorCode.ROBOT_DISCONNECTED.getMessage()
+                );
     }
 
     @Test

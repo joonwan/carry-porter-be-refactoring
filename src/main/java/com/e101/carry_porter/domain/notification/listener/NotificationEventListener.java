@@ -112,7 +112,7 @@ public class NotificationEventListener {
                 NotificationPayload.failure(
                         event.missionId(),
                         event.userId(),
-                        "미션 수행 중 오류가 발생했습니다.",
+                        event.message(),
                         event.failureCode()
                 )
         );
