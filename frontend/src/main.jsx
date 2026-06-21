@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import "./styles.css";
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 
 const missionSteps = [
   { key: "MISSION_CREATED", label: "미션 생성" },
@@ -88,7 +88,7 @@ function App() {
   async function handleSignup(form) {
     setErrorMessage("");
 
-    await request("/api/users", {
+    await request("/users", {
       method: "POST",
       body: JSON.stringify(form),
       headers: {},
@@ -101,7 +101,7 @@ function App() {
   async function handleLogin(form) {
     setErrorMessage("");
 
-    const body = await request("/api/auth/login", {
+    const body = await request("/auth/login", {
       method: "POST",
       body: JSON.stringify(form),
       headers: {},
@@ -122,7 +122,7 @@ function App() {
   async function createMission() {
     setErrorMessage("");
 
-    const body = await request("/api/missions", {
+    const body = await request("/missions", {
       method: "POST",
       body: JSON.stringify({}),
     });
@@ -145,7 +145,7 @@ function App() {
     }
 
     setErrorMessage("");
-    await request(`/api/missions/${missionId}/return`, {
+    await request(`/missions/${missionId}/return`, {
       method: "POST",
       body: JSON.stringify({}),
     });
@@ -154,7 +154,7 @@ function App() {
   async function logout() {
     try {
       if (token) {
-        await request("/api/auth/logout", {
+        await request("/auth/logout", {
           method: "POST",
           body: JSON.stringify({}),
         });
@@ -186,7 +186,7 @@ function App() {
 
     try {
       setSseStatus("CONNECTING");
-      const response = await fetch(`${API_BASE_URL}/api/notifications/subscribe`, {
+      const response = await fetch(`${API_BASE_URL}/notifications/subscribe`, {
         headers: {
           Accept: "text/event-stream",
           Authorization: `Bearer ${accessToken}`,
