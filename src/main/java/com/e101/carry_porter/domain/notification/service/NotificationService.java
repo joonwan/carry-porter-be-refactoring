@@ -95,6 +95,11 @@ public class NotificationService {
                 );
     }
 
+    public void sendHeartbeat() {
+        notificationEmitterRepository.findAll()
+                .forEach(this::sendHeartbeatComment);
+    }
+
     private void registerEmitterCallbacks(Long userId, SseEmitter emitter) {
         // 연결 종료, timeout, 에러 발생 시 저장소에서 emitter 제거
         emitter.onCompletion(() -> notificationEmitterRepository.delete(userId, emitter));
@@ -210,6 +215,16 @@ public class NotificationService {
         } catch (IOException exception) {
             log.error("SSE 알림 전송 실패: userId = {}, eventType = {}",
                     userId, payload.eventType(), exception);
+            notificationEmitterRepository.delete(userId, emitter);
+            emitter.completeWithError(exception);
+        }
+    }
+
+    private void sendHeartbeatComment(Long userId, SseEmitter emitter) {
+        try {
+            emitter.send(SseEmitter.event().comment("ping"));
+        } catch (IOException exception) {
+            log.info("SSE heartbeat 전송 실패. emitter 제거: userId = {}", userId);
             notificationEmitterRepository.delete(userId, emitter);
             emitter.completeWithError(exception);
         }

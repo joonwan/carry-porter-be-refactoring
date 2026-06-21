@@ -137,4 +137,17 @@ class NotificationServiceTest extends TransactionalIntegrationTestSupport {
         assertThat(emitter).isNotNull();
         assertThat(notificationEmitterRepository.findByUserId(user.getId())).contains(emitter);
     }
+
+    @Test
+    @DisplayName("활성화된 SSE 연결이 있으면 heartbeat 전송을 시도한다")
+    void sendHeartbeat() {
+        // given
+        Long userId = 1L;
+        SseEmitter emitter = notificationService.createConnection(userId);
+
+        // when & then
+        assertThatCode(() -> notificationService.sendHeartbeat())
+                .doesNotThrowAnyException();
+        assertThat(notificationEmitterRepository.findByUserId(userId)).contains(emitter);
+    }
 }

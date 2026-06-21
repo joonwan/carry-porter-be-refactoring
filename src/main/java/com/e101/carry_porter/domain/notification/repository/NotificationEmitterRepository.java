@@ -17,6 +17,10 @@ public class NotificationEmitterRepository {
 		return Optional.ofNullable(emitters.get(userId));
 	}
 
+	public Map<Long, SseEmitter> findAll() {
+		return Map.copyOf(emitters);
+	}
+
 	public void save(Long userId, SseEmitter emitter) {
 		emitters.put(userId, emitter);
 	}

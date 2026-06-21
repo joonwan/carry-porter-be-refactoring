@@ -6,6 +6,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.util.Map;
+
 class NotificationEmitterRepositoryTest {
 
     private final NotificationEmitterRepository notificationEmitterRepository = new NotificationEmitterRepository();
@@ -39,5 +41,24 @@ class NotificationEmitterRepositoryTest {
 
         // then
         assertThat(notificationEmitterRepository.findByUserId(userId)).contains(newEmitter);
+    }
+
+    @Test
+    @DisplayName("저장된 전체 emitter 목록을 조회한다")
+    void findAll() {
+        // given
+        SseEmitter firstEmitter = new SseEmitter();
+        SseEmitter secondEmitter = new SseEmitter();
+        notificationEmitterRepository.save(1L, firstEmitter);
+        notificationEmitterRepository.save(2L, secondEmitter);
+
+        // when
+        Map<Long, SseEmitter> emitters = notificationEmitterRepository.findAll();
+
+        // then
+        assertThat(emitters)
+                .hasSize(2)
+                .containsEntry(1L, firstEmitter)
+                .containsEntry(2L, secondEmitter);
     }
 }
