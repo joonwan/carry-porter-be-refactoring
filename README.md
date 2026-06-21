@@ -1,86 +1,88 @@
 ![Carry Porter](assets/readme-cover.png)
 
+# Carry Porter Refactoring
+
 ## 1. 프로젝트 소개
 
-Carry Porter는 SSAFY에서 진행한 팀 프로젝트로, 사용자 요청부터 로봇 배정, 출발, 도착, 복귀, 종료까지의 흐름을 관리하는 로봇 호출 백엔드 시스템입니다.  
-이 저장소는 기존 프로젝트([joonwan/carryporter](https://github.com/joonwan/carryporter))를 바탕으로, 미션 상태 흐름과 이벤트 구조를 다시 설계하고 MQTT / SSE / JWT 인증 구조를 포함한 전체 비즈니스 흐름을 재구성하며 리팩토링한 프로젝트입니다.
+### 개요
 
+Carry Porter는 SSAFY에서 진행한 로봇 호출 서비스 팀 프로젝트입니다.  
+이 저장소는 기존 프로젝트를 기반으로 미션 상태 흐름, 이벤트 구조, MQTT 통신, SSE 알림, 인증 구조를 다시 설계하고 직접 재구현한 리팩토링 프로젝트입니다.
 
-## 2. 진행 인원
+### 프로젝트 정보
 
-- 리팩토링: [joonwan](https://github.com/joonwan)
+- 원본 프로젝트: [joonwan/carryporter](https://github.com/joonwan/carryporter)
+- 진행 인원: [joonwan](https://github.com/joonwan)
+- 담당 범위: 백엔드 리팩토링, MQTT Pipeline, SSE 알림, 인증, 멀티 인스턴스 실험 환경 구축
 
-## 3. 핵심 리팩토링 포인트
+## 2. 주요 개선 포인트
 
-- SSE 실시간 알림 기능과 재구독 시 누락 알림 복구 구조 구축.
-- Spring Integration 기반 MQTT 메시지 파이프라인을 구축.
-- 이벤트 기반으로 비즈니스 흐름을 분리하는 Event-Driven Architecture를 설계 및 구축.
+### MQTT 처리 구조 개선
 
-## 4. 주요 기능
+- 기존: **Paho callback** 내부에서 topic 직접 파싱 및 `switch` 기반 메시지 분기
+- 개선: **Spring Integration 기반 MQTT inbound / outbound pipeline**으로 재구성
+- 결과: **Adapter, Transformer, Router, Service Activator** 책임 분리
 
-- 회원가입 / 로그인 / JWT 기반 인증
-- 미션 생성
-- 로봇 자동 배정
-- 미션 출발 / 도착 / 복귀 시작 / 종료 / 실패 처리
-- MQTT 기반 로봇 명령 발행 및 상태 메시지 수신
-- SSE 기반 실시간 미션 알림 전송
-- `Last-Event-ID` 기반 누락 알림 복구
-- 오래된 알림 정리 스케줄러 운영
+### SSE 알림 구조 개선
 
-## 5. 기술 스택
+- 기존: 이벤트 발생 시 메모리의 **`SseEmitter`**를 조회해 즉시 알림 전송
+- 개선: 알림을 **DB에 먼저 저장한 뒤 SSE로 전송**
+- 결과: SSE 재연결 시 이벤트 로그 재생 대신 **DB 기준 현재 진행 중인 미션 상태 동기화**
 
-- Backend: Java 21, Spring Boot, Spring Web, Spring Data JPA, Spring Security
-- Database: MySQL
-- Messaging: Spring Integration, MQTT, Eclipse Paho, SSE
-- Auth: JWT
-- Test: JUnit 5, Testcontainers, Mockito, JaCoCo
-- Infra: Docker, Mosquitto
+### 멀티 인스턴스 환경 대응 추가
 
-## 6. 시스템 아키텍처
+- 문제: **`SseEmitter`가 각 Spring Boot 인스턴스 메모리에 저장**되어 다른 인스턴스에서 조회 불가
+- 확인: 알림 생성 인스턴스와 SSE 연결 보유 인스턴스가 달라질 경우 **실시간 알림 전송 실패**
+- 개선: **Redis Pub/Sub**로 알림 생성 사실을 모든 인스턴스에 전파
+- 결과: 각 인스턴스가 자신이 보유한 **SSE 연결 여부를 확인한 뒤 알림 전송**
+
+### MQTT 중복 메시지 방어 추가
+
+- 문제: 멀티 인스턴스 환경에서 **동일 MQTT 메시지를 여러 인스턴스가 동시에 수신**
+- 증상: **중복 상태 변경 및 중복 SSE 알림 발생**
+- 개선 1: **MQTT shared subscription** 적용
+- 개선 2: 로봇 메시지에 **`robot_event_id`** 추가
+- 결과: **`processed_robot_events` 테이블**을 이용해 이미 처리한 로봇 이벤트 중복 방어
+
+## 3. 시스템 구조
+
+### System Architecture
 
 ```mermaid
 flowchart LR
-    A["Client"] -->|HTTP / JWT| B["Spring Boot API"]
-    B --> C["Mission / Robot / User Domain"]
-    C --> D["Domain Events"]
-    D --> E["Event Listeners"]
-    E --> F["Notification Service"]
-    F --> G["MySQL"]
-    F --> H["SSE"]
+    CLIENT["Client"] -->|HTTP / JWT| APP1["Spring Boot App"]
+    CLIENT -->|SSE Subscribe| APP1
+    CLIENT -->|HTTP / JWT| APP2["Spring Boot App"]
 
-    E --> I["MqttCommandPublisher"]
-    I --> J["Spring Integration MQTT Outbound"]
-    J --> K["Mosquitto Broker"]
-    K --> L["Robot Simulator / Robot"]
+    APP1 --> DB["MySQL"]
+    APP2 --> DB
 
-    L --> K
-    K --> M["Spring Integration MQTT Inbound"]
-    M --> N["Inbound Pipeline"]
-    N --> C
+    APP1 <-->|Pub/Sub| REDIS["Redis"]
+    APP2 <-->|Pub/Sub| REDIS
+
+    APP1 -->|MQTT Command| MQTT["Mosquitto Broker"]
+    APP2 -->|MQTT Command| MQTT
+
+    MQTT -->|Robot Event| APP1
+    MQTT -->|Robot Event| APP2
+
+    ROBOT["Robot Simulator"] <-->|MQTT| MQTT
 ```
 
-### 이벤트 흐름 요약
-
-1. 사용자가 미션을 생성하면 `MissionCreatedEvent`가 발행됩니다.
-2. 로봇 배정 리스너가 이벤트를 받아 로봇을 배정하고 `RobotAssignedEvent`를 발행합니다.
-3. 미션 상태 리스너가 미션을 출발 상태로 변경하고 `MissionStartedEvent`를 발행합니다.
-4. 로봇 명령 리스너가 MQTT `departure` 명령을 발행합니다.
-5. 로봇이 `arrived`, `returned`, `emergency` 메시지를 보내면 inbound pipeline이 이를 수신 이벤트로 변환합니다.
-6. 미션 서비스가 상태를 반영한 뒤 `MissionArrivedEvent`, `MissionFinishedEvent`, `MissionFailedEvent`를 발행합니다.
-7. 알림 리스너가 알림을 DB에 저장하고, 커밋 이후 SSE로 전송합니다.
-8. 사용자가 재구독하면 `Last-Event-ID` 이후의 누락 알림을 다시 전송합니다.
-
-## 7. ERD
+### ERD
 
 ```mermaid
 erDiagram
     USERS ||--o{ MISSIONS : creates
+    USERS ||--o{ NOTIFICATIONS : receives
     ROBOTS ||--o{ MISSIONS : assigned_to
+    MISSIONS ||--o{ NOTIFICATIONS : creates
 
     USERS {
         BIGINT user_id PK
         VARCHAR username
         VARCHAR password
+        VARCHAR refresh_token
         DATETIME created_at
         DATETIME updated_at
     }
@@ -104,18 +106,99 @@ erDiagram
 
     NOTIFICATIONS {
         BIGINT notification_id PK
-        BIGINT user_id
-        BIGINT mission_id
+        BIGINT user_id FK
+        BIGINT mission_id FK
         VARCHAR event_type
         VARCHAR message
         VARCHAR failure_code
         DATETIME created_at
         DATETIME updated_at
     }
+
+    PROCESSED_ROBOT_EVENTS {
+        BIGINT processed_robot_event_id PK
+        VARCHAR robot_event_id
+        VARCHAR robot_mac_address
+        DATETIME created_at
+        DATETIME updated_at
+    }
 ```
 
-## 8. 트러블슈팅
+## 4. 기술 스택
 
-- 동시성 제어 테스트 과정에서 겪은 트랜잭션 가시성 이슈 정리 예정
-- SSE 재구독 기반 누락 알림 복구 구현 과정 정리 예정
-- 블로그 포스팅 작성 후 링크 추가 예정
+### Backend
+
+![Java](https://img.shields.io/badge/Java_21-007396?style=for-the-badge&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![Spring Web](https://img.shields.io/badge/Spring_Web-6DB33F?style=for-the-badge&logo=spring&logoColor=white)
+![Spring Data JPA](https://img.shields.io/badge/Spring_Data_JPA-6DB33F?style=for-the-badge&logo=spring&logoColor=white)
+![Spring Security](https://img.shields.io/badge/Spring_Security-6DB33F?style=for-the-badge&logo=springsecurity&logoColor=white)
+
+### Database
+
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+
+### Messaging
+
+![Spring Integration](https://img.shields.io/badge/Spring_Integration-6DB33F?style=for-the-badge&logo=spring&logoColor=white)
+![MQTT](https://img.shields.io/badge/MQTT-660066?style=for-the-badge&logo=mqtt&logoColor=white)
+![Eclipse Paho](https://img.shields.io/badge/Eclipse_Paho-2C2255?style=for-the-badge&logo=eclipseide&logoColor=white)
+![SSE](https://img.shields.io/badge/SSE-111111?style=for-the-badge&logo=serverless&logoColor=white)
+![Redis Pub/Sub](https://img.shields.io/badge/Redis_Pub/Sub-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+
+### Infra
+
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Docker Compose](https://img.shields.io/badge/Docker_Compose-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![Mosquitto](https://img.shields.io/badge/Mosquitto-3C5280?style=for-the-badge&logo=eclipsemosquitto&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
+
+### Test
+
+![JUnit5](https://img.shields.io/badge/JUnit_5-25A162?style=for-the-badge&logo=junit5&logoColor=white)
+![Mockito](https://img.shields.io/badge/Mockito-78A641?style=for-the-badge&logoColor=white)
+![Testcontainers](https://img.shields.io/badge/Testcontainers-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![JaCoCo](https://img.shields.io/badge/JaCoCo-EA2D2E?style=for-the-badge&logoColor=white)
+
+## 5. 실행 방법
+
+### Docker Compose 실행
+
+```bash
+docker compose --env-file .env.local -f docker-compose.local.yaml up --build
+```
+
+### Docker Compose 종료
+
+```bash
+docker compose --env-file .env.local -f docker-compose.local.yaml down
+```
+
+### Frontend 실행
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### 로봇 시뮬레이터 실행
+
+```bash
+cd clients/robot-simulator
+
+export MQTT_BROKER_HOST=localhost
+export MQTT_BROKER_PORT=1884
+export ROBOT_MAC_ADDRESS=AA:BB:CC:DD:EE:01
+export MQTT_QOS=1
+export SIMULATED_TRAVEL_SECONDS=5
+
+python3 robot_client.py
+```
+
+## 6. 관련 포스트
+
+- [이벤트 기반 구조 설계]()
+- [SSE 멀티 인스턴스 알림 전파 문제 해결]()
+- [MQTT 중복 메시지 처리 문제 해결]()
+- [Testcontainers 기반 동시성 테스트]()
