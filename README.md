@@ -93,26 +93,20 @@ Carry Porter는 SSAFY에서 진행한 로봇 호출 서비스 팀 프로젝트�
 
 ### System Architecture
 
-```mermaid
-flowchart LR
-    CLIENT["Client"] -->|HTTP / JWT| APP1["Spring Boot App"]
-    CLIENT -->|SSE Subscribe| APP1
-    CLIENT -->|HTTP / JWT| APP2["Spring Boot App"]
+![System Architecture](assets/system-architecture.png)
 
-    APP1 --> DB["MySQL"]
-    APP2 --> DB
+### Component Roles
 
-    APP1 <-->|Pub/Sub| REDIS["Redis"]
-    APP2 <-->|Pub/Sub| REDIS
-
-    APP1 -->|MQTT Command| MQTT["Mosquitto Broker"]
-    APP2 -->|MQTT Command| MQTT
-
-    MQTT -->|Robot Event| APP1
-    MQTT -->|Robot Event| APP2
-
-    ROBOT["Robot Simulator"] <-->|MQTT| MQTT
-```
+| Component | Role |
+| --- | --- |
+| Nginx | Load Balancer, Reverse Proxy, Static Web Server |
+| Spring Boot App-1 | Application Server |
+| Spring Boot App-2 | Application Server |
+| MySQL | Database |
+| Redis | Notification Pub/Sub Broker |
+| Mosquitto | MQTT Message Broker |
+| Robot Simulator | MQTT Robot Client |
+| Browser | Web Client |
 
 ### ERD
 
