@@ -110,58 +110,7 @@ Carry Porter는 SSAFY에서 진행한 로봇 호출 서비스 팀 프로젝트�
 
 ### ERD
 
-```mermaid
-erDiagram
-    USERS ||--o{ MISSIONS : creates
-    USERS ||--o{ NOTIFICATIONS : receives
-    ROBOTS ||--o{ MISSIONS : assigned_to
-    MISSIONS ||--o{ NOTIFICATIONS : creates
-
-    USERS {
-        BIGINT user_id PK
-        VARCHAR username
-        VARCHAR password
-        VARCHAR refresh_token
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
-    ROBOTS {
-        BIGINT robot_id PK
-        VARCHAR mac_address
-        VARCHAR robot_status
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
-    MISSIONS {
-        BIGINT mission_id PK
-        BIGINT user_id FK
-        BIGINT robot_id FK
-        VARCHAR mission_status
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
-    NOTIFICATIONS {
-        BIGINT notification_id PK
-        BIGINT user_id FK
-        BIGINT mission_id FK
-        VARCHAR event_type
-        VARCHAR message
-        VARCHAR failure_code
-        DATETIME created_at
-        DATETIME updated_at
-    }
-
-    PROCESSED_ROBOT_EVENTS {
-        BIGINT processed_robot_event_id PK
-        VARCHAR robot_event_id
-        VARCHAR robot_mac_address
-        DATETIME created_at
-        DATETIME updated_at
-    }
-```
+![ERD](assets/erd.png)
 
 ## 5. 기술 스택
 
