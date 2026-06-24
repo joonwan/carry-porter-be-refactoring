@@ -9,6 +9,7 @@ import com.e101.carry_porter.domain.mission.event.MissionFailedEvent;
 import com.e101.carry_porter.domain.mission.exception.MissionErrorCode;
 import com.e101.carry_porter.domain.mission.exception.MissionException;
 import com.e101.carry_porter.domain.mission.repository.MissionRepository;
+import com.e101.carry_porter.domain.robot.entity.ProcessedRobotEvent;
 import com.e101.carry_porter.domain.robot.entity.Robot;
 import com.e101.carry_porter.domain.robot.entity.RobotStatus;
 import com.e101.carry_porter.domain.robot.event.RobotAssignedEvent;
@@ -121,6 +122,23 @@ class RobotServiceTest extends TransactionalIntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("이미 처리된 robotEventId로 로봇 연결 메시지가 다시 들어오면 RobotException을 던진다")
+    void registerOrReconnectWithDuplicateRobotEvent() {
+        // given
+        String robotEventId = "robot-event-register-duplicate-1";
+        String macAddress = "AA:BB:CC:DD:EE:17";
+        processedRobotEventRepository.saveAndFlush(
+                ProcessedRobotEvent.create(robotEventId, macAddress)
+        );
+
+        // when & then
+        assertThatThrownBy(() -> robotService.registerOrReconnect(robotEventId, macAddress))
+                .isInstanceOf(RobotException.class)
+                .extracting(exception -> ((RobotException) exception).getErrorCode())
+                .isEqualTo(RobotErrorCode.DUPLICATE_ROBOT_EVENT);
+    }
+
+    @Test
     @DisplayName("로봇 연결이 끊기면 상태를 OFFLINE으로 변경한다")
     void disconnect() {
         // given
@@ -192,6 +210,23 @@ class RobotServiceTest extends TransactionalIntegrationTestSupport {
                         RobotErrorCode.ROBOT_DISCONNECTED.getCode(),
                         RobotErrorCode.ROBOT_DISCONNECTED.getMessage()
                 );
+    }
+
+    @Test
+    @DisplayName("이미 처리된 robotEventId로 로봇 연결 끊김 메시지가 다시 들어오면 RobotException을 던진다")
+    void disconnectWithDuplicateRobotEvent() {
+        // given
+        String robotEventId = "robot-event-disconnect-duplicate-1";
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:18"));
+        processedRobotEventRepository.saveAndFlush(
+                ProcessedRobotEvent.create(robotEventId, robot.getMacAddress())
+        );
+
+        // when & then
+        assertThatThrownBy(() -> robotService.disconnect(robotEventId, robot.getMacAddress()))
+                .isInstanceOf(RobotException.class)
+                .extracting(exception -> ((RobotException) exception).getErrorCode())
+                .isEqualTo(RobotErrorCode.DUPLICATE_ROBOT_EVENT);
     }
 
     @Test

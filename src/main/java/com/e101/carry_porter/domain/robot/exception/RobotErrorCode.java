@@ -11,7 +11,8 @@ public enum RobotErrorCode implements ErrorCode {
 
     AVAILABLE_ROBOT_NOT_FOUND(HttpStatus.NOT_FOUND, "ROBOT_404", "배정 가능한 로봇이 없습니다."),
     ROBOT_NOT_FOUND(HttpStatus.NOT_FOUND, "ROBOT_405", "로봇을 찾을 수 없습니다."),
-    ROBOT_DISCONNECTED(HttpStatus.BAD_REQUEST, "ROBOT_406", "로봇 연결이 끊겼습니다.");
+    ROBOT_DISCONNECTED(HttpStatus.BAD_REQUEST, "ROBOT_406", "로봇 연결이 끊겼습니다."),
+    DUPLICATE_ROBOT_EVENT(HttpStatus.CONFLICT, "ROBOT_409", "이미 처리된 로봇 이벤트입니다.");
 
     private final HttpStatus status;
     private final String code;

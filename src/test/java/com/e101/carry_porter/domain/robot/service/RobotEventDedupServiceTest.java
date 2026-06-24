@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.e101.carry_porter.domain.robot.entity.ProcessedRobotEvent;
+import com.e101.carry_porter.domain.robot.exception.RobotErrorCode;
+import com.e101.carry_porter.domain.robot.exception.RobotException;
 import com.e101.carry_porter.domain.robot.repository.ProcessedRobotEventRepository;
 import com.e101.carry_porter.support.TransactionalIntegrationTestSupport;
 import org.junit.jupiter.api.DisplayName;
@@ -80,6 +82,25 @@ class RobotEventDedupServiceTest extends TransactionalIntegrationTestSupport {
 
         // then
         assertThat(processedRobotEventRepository.existsByRobotEventId(robotEventId)).isTrue();
+    }
+
+    @Test
+    @DisplayName("이미 처리된 robotEventId를 다시 저장하면 RobotException을 던진다")
+    void markProcessedRobotEventWithDuplicateRobotEventId() {
+        // given
+        String robotEventId = "robot-event-duplicate-1";
+        processedRobotEventRepository.saveAndFlush(
+                ProcessedRobotEvent.create(robotEventId, "AA:BB:CC:DD:EE:05")
+        );
+
+        // when & then
+        assertThatThrownBy(() -> robotEventDedupService.markProcessedRobotEvent(
+                robotEventId,
+                "AA:BB:CC:DD:EE:05"
+        ))
+                .isInstanceOf(RobotException.class)
+                .extracting(exception -> ((RobotException) exception).getErrorCode())
+                .isEqualTo(RobotErrorCode.DUPLICATE_ROBOT_EVENT);
     }
 
     @Test

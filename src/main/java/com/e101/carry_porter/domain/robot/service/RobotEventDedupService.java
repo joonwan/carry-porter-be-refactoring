@@ -1,9 +1,12 @@
 package com.e101.carry_porter.domain.robot.service;
 
 import com.e101.carry_porter.domain.robot.entity.ProcessedRobotEvent;
+import com.e101.carry_porter.domain.robot.exception.RobotErrorCode;
+import com.e101.carry_porter.domain.robot.exception.RobotException;
 import com.e101.carry_porter.domain.robot.repository.ProcessedRobotEventRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -38,9 +41,15 @@ public class RobotEventDedupService {
             throw new IllegalArgumentException("robotEventId 는 비어 있을 수 없습니다.");
         }
 
-        processedRobotEventRepository.saveAndFlush(
-                ProcessedRobotEvent.create(robotEventId, robotMacAddress)
-        );
+        try {
+            processedRobotEventRepository.saveAndFlush(
+                    ProcessedRobotEvent.create(robotEventId, robotMacAddress)
+            );
+        } catch (DataIntegrityViolationException exception) {
+            log.info("이미 처리된 robot 이벤트 저장 요청입니다: robotEventId = {}, robotMacAddress = {}",
+                    robotEventId, robotMacAddress);
+            throw new RobotException(RobotErrorCode.DUPLICATE_ROBOT_EVENT);
+        }
 
         log.info("robot 이벤트 처리 완료 저장: robotEventId = {}, robotMacAddress = {}",
                 robotEventId, robotMacAddress);

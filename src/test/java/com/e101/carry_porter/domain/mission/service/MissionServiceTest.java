@@ -16,7 +16,10 @@ import com.e101.carry_porter.domain.mission.exception.MissionException;
 import com.e101.carry_porter.domain.mission.repository.MissionRepository;
 import com.e101.carry_porter.domain.mission.service.dto.request.CreateMissionServiceRequest;
 import com.e101.carry_porter.domain.mission.service.dto.response.CreateMissionServiceResponse;
+import com.e101.carry_porter.domain.robot.entity.ProcessedRobotEvent;
 import com.e101.carry_porter.domain.robot.entity.Robot;
+import com.e101.carry_porter.domain.robot.exception.RobotErrorCode;
+import com.e101.carry_porter.domain.robot.exception.RobotException;
 import com.e101.carry_porter.domain.robot.repository.ProcessedRobotEventRepository;
 import com.e101.carry_porter.domain.robot.repository.RobotRepository;
 import com.e101.carry_porter.domain.user.entity.User;
@@ -281,6 +284,32 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("이미 처리된 robotEventId로 도착 메시지가 다시 들어오면 RobotException을 던진다")
+    void arriveWithDuplicateRobotEvent() {
+        // given
+        String robotEventId = "robot-event-arrive-duplicate-1";
+        User user = userRepository.save(User.createUser("arrive-user-duplicate-event", "password"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:36"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+        processedRobotEventRepository.saveAndFlush(
+                ProcessedRobotEvent.create(robotEventId, robot.getMacAddress())
+        );
+
+        // when & then
+        assertThatThrownBy(() -> missionService.arrive(
+                mission.getId(),
+                robotEventId,
+                robot.getMacAddress(),
+                user.getId()
+        ))
+                .isInstanceOf(RobotException.class)
+                .extracting(exception -> ((RobotException) exception).getErrorCode())
+                .isEqualTo(RobotErrorCode.DUPLICATE_ROBOT_EVENT);
+    }
+
+    @Test
     @DisplayName("도착한 미션을 복귀 시작 처리하면 RETURNING 상태로 변경하고 MissionReturnStartedEvent를 발행한다")
     void returnStart() {
         // given
@@ -474,6 +503,34 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
     }
 
     @Test
+    @DisplayName("이미 처리된 robotEventId로 종료 메시지가 다시 들어오면 RobotException을 던진다")
+    void finishWithDuplicateRobotEvent() {
+        // given
+        String robotEventId = "robot-event-finish-duplicate-1";
+        User user = userRepository.save(User.createUser("finish-user-duplicate-event", "password"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:56"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+        mission.arrive();
+        mission.startReturning();
+        processedRobotEventRepository.saveAndFlush(
+                ProcessedRobotEvent.create(robotEventId, robot.getMacAddress())
+        );
+
+        // when & then
+        assertThatThrownBy(() -> missionService.finish(
+                mission.getId(),
+                robotEventId,
+                robot.getMacAddress(),
+                user.getId()
+        ))
+                .isInstanceOf(RobotException.class)
+                .extracting(exception -> ((RobotException) exception).getErrorCode())
+                .isEqualTo(RobotErrorCode.DUPLICATE_ROBOT_EVENT);
+    }
+
+    @Test
     @DisplayName("진행 중인 미션을 실패 처리하면 FAILED 상태로 변경되고 로봇은 기존 BUSY 상태를 유지한다")
     void fail() {
         // given
@@ -633,5 +690,33 @@ class MissionServiceTest extends TransactionalIntegrationTestSupport {
 
         assertThat(unchangedMission.getMissionStatus()).isEqualTo(MissionStatus.FAILED);
         assertThat(unchangedMission.getRobot().getRobotStatus()).isEqualTo(com.e101.carry_porter.domain.robot.entity.RobotStatus.BUSY);
+    }
+
+    @Test
+    @DisplayName("이미 처리된 robotEventId로 실패 메시지가 다시 들어오면 RobotException을 던진다")
+    void failWithDuplicateRobotEvent() {
+        // given
+        String robotEventId = "robot-event-fail-duplicate-1";
+        User user = userRepository.save(User.createUser("fail-user-duplicate-event", "password"));
+        Robot robot = robotRepository.save(Robot.createRobot("AA:BB:CC:DD:EE:65"));
+        Mission mission = missionRepository.save(Mission.createMission(user));
+        mission.assignRobot(robot);
+        mission.dispatch();
+        processedRobotEventRepository.saveAndFlush(
+                ProcessedRobotEvent.create(robotEventId, robot.getMacAddress())
+        );
+
+        // when & then
+        assertThatThrownBy(() -> missionService.fail(
+                mission.getId(),
+                robotEventId,
+                robot.getMacAddress(),
+                user.getId(),
+                "ROBOT_EMERGENCY",
+                "obstacle detected"
+        ))
+                .isInstanceOf(RobotException.class)
+                .extracting(exception -> ((RobotException) exception).getErrorCode())
+                .isEqualTo(RobotErrorCode.DUPLICATE_ROBOT_EVENT);
     }
 }
