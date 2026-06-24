@@ -211,5 +211,5 @@ npm run dev
 
 - [이벤트 기반 구조 설계]()
 - [SSE 멀티 인스턴스 알림 전파 문제 해결](https://joonwan.github.io/sse-multi-instance-redis-pubsub)
-- [MQTT 중복 메시지 처리 문제 해결]()
+- [MQTT 중복 메시지 처리 문제 해결](https://joonwan.github.io/mqtt-shared-subscription-dedup)
 - [Testcontainers 기반 동시성 테스트](https://joonwan.github.io/pessimistic-lock-concurrency-test)
